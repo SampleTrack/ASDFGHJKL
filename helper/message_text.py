@@ -44,7 +44,7 @@ class text_messages():
 𝒮𝓉𝒶𝓎 𝓊𝓅𝒹𝒶𝓉𝑒𝒹, 𝓈𝒶𝓋𝑒 𝓂𝑜𝓃𝑒𝓎 💰, 𝒶𝓃𝒹 𝓃𝑒𝓋𝑒𝓇 𝓂𝒾𝓈𝓈 𝒶 𝒹𝑒𝒶𝓁! 🚀
 
 """
-  Fsub_text = f"**⚠️Access Denied!⚠️\n\nPlease Join [{Telegram.Fusb_name}]({Telegram.Fsub_Link}) to use me. If you joined click check again button to confirm.**"
+  Fsub_text = f"**⚠️Access Denied!⚠️\n\nPlease Join [{Telegram.FSUB_NAME}]({Telegram.FSUB_LINK}) to use me. If you joined click check again button to confirm.**"
 
   verification_text = """
 **Sorry! 🥺🥹**   
