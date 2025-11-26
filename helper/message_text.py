@@ -62,7 +62,7 @@ Unlock **all 20 bots** with **no ad-limits** until **11:59 PM** by completing a 
 class message_buttons():
   Fsub_buttons = InlineKeyboardMarkup(
     [
-      [InlineKeyboardButton("🍀join 🍀", url=Telegram.Fsub_Link)]
+      [InlineKeyboardButton("🍀join 🍀", url=Telegram.FSUB_LINK)]
     ]
   )
 
