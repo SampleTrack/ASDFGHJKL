@@ -9,11 +9,32 @@ from helper.database import add_user, all_users, users, remove_user
 from helper.message_text import text_messages, message_buttons
 
 
+# @app.on_message(filters.command("start"))
+# async def start_command(client, message):
+#     user_id = message.from_user.id
+#     try:
+#         await client.get_chat_member(Telegram.Fsub_ID, user_id)
+#         await add_user(user_id, client)
+#         await message.reply_text(
+#             text_messages.start_text,
+#             disable_web_page_preview=True,
+#             reply_to_message_id=message.id,
+#             reply_markup=message_buttons.start_buttons,
+#         )
+#     except UserNotParticipant:
+#         await message.reply(
+#             text_messages.Fsub_text,
+#             reply_markup=message_buttons.Fsub_buttons
+#         )
+#     except Exception as e:
+#         print(f"Error in start function: {e}")
+
+
 @app.on_message(filters.command("start"))
-async def start_command(client, message):
-    user_id = message.from_user.id
+async def start(client, message):
+    """Reply start message"""
     try:
-        await client.get_chat_member(Telegram.Fsub_ID, user_id)
+        user_id = message.from_user.id
         await add_user(user_id, client)
         await message.reply_text(
             text_messages.start_text,
@@ -21,13 +42,9 @@ async def start_command(client, message):
             reply_to_message_id=message.id,
             reply_markup=message_buttons.start_buttons,
         )
-    except UserNotParticipant:
-        await message.reply(
-            text_messages.Fsub_text,
-            reply_markup=message_buttons.Fsub_buttons
-        )
     except Exception as e:
-        print(f"Error in start function: {e}")
+        print(f"Error in start: {e}")
+        await message.reply("An error occurred. Please try again later.")
 
 
 @app.on_message(filters.command("help"))
@@ -45,11 +62,17 @@ async def help_command(client, msg: types.Message):
 
 
 @app.on_message(filters.command("users") & filters.user(Telegram.ADMIN))
-async def dbtool(client, message):
-    xx = all_users()
-    await message.reply(f"""
-🍀 Chats Stats 🍀
-🙋‍♂️ Users : `{xx}` """)
+async def users(client, message):
+    """Show user count"""
+    try:
+        xx = all_users()
+        await message.reply(
+            f"🍀 Chats Stats 🍀\n"
+            f"🙋‍♂️ Users : `{xx}`"
+        )
+    except Exception as e:
+        print(f"Error in users: {e}")
+        await message.reply("An error occurred. Please try again later.")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast Copy ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
