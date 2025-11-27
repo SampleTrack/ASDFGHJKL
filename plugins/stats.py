@@ -19,7 +19,7 @@ async def get_stats(client: Client, message: Message):
     Calculates and displays bot usage statistics based on active trackings.
     """
     start_time = time.time()
-    stats_msg = await message.reply("⏳ **Calculating statistics, please wait...**", quote=True)
+    stats_msg = await message.reply_text("⏳ **Calculating statistics, please wait...**", quote=True)
 
     try:
         # --- Database Queries ---
@@ -28,32 +28,31 @@ async def get_stats(client: Client, message: Message):
 
         # --- Data Processing ---
 
-        # 1. Get a set of all unique product IDs currently tracked by any user.
-        active_product_ids = {
-            pid for user in all_users for pid in user.get("trackings", [])
-        }
+        # 1. Collect all unique product IDs currently tracked by any user.
+        active_product_ids = {pid for user in all_users for pid in user.get("trackings", [])}
 
-        # 2. Fetch only the active products to get their source.
-        active_products_cursor = products.find(
-            {"_id": {"$in": list(active_product_ids)}},
-            {"_id": 1, "source": 1}
-        )
-
-        # 3. Dynamically tally all sources from the list of active products.
+        # If no active product ids, skip the DB query.
         source_counts = defaultdict(int)
         found_product_ids = set()
-        for product in active_products_cursor:
-            found_product_ids.add(product["_id"])
-            source = product.get("source", "unknown")
-            source_counts[source] += 1
+        if active_product_ids:
+            # 2. Fetch only the active products to get their source.
+            active_products_cursor = products.find(
+                {"_id": {"$in": list(active_product_ids)}},
+                {"_id": 1, "source": 1}
+            )
+
+            # 3. Tally all sources from the list of active products.
+            for product in active_products_cursor:
+                found_product_ids.add(product["_id"])
+                source = product.get("source", "unknown")
+                source_counts[source] += 1
 
         # 4. Recalculate user counts and total trackings based on found products.
         total_valid_trackings = 0
         user_tracking_counts = []
         for user in all_users:
             user_id = user.get("user_id")
-            tracking_ids = user.get("trackings", [])
-
+            tracking_ids = user.get("trackings", []) or []
             if not user_id or not tracking_ids:
                 continue
 
@@ -62,27 +61,28 @@ async def get_stats(client: Client, message: Message):
 
             if valid_count > 0:
                 user_tracking_counts.append((user_id, valid_count))
-            
+
             total_valid_trackings += valid_count
 
         # Sort users by tracking count to find the top 10
         top_10_users = sorted(user_tracking_counts, key=lambda item: item[1], reverse=True)[:10]
 
         # --- Format the Output ---
-        
-        # Dynamically create the list of sources and their counts
-        source_stats_text = ""
         if source_counts:
-            # Sort by source name for a consistent, alphabetical order
-            for source, count in sorted(source_counts.items()):
-                source_stats_text += f"  - **{source.capitalize()}:** `{count}` products\n"
+            source_stats_lines = [
+                f"  - **{source.capitalize()}:** `{count}` products"
+                for source, count in sorted(source_counts.items())
+            ]
+            source_stats_text = "\n".join(source_stats_lines) + "\n"
         else:
             source_stats_text = "  No active products found.\n"
-            
-        top_users_text = ""
+
         if top_10_users:
-            for i, (user_id, count) in enumerate(top_10_users):
-                top_users_text += f"  `{i+1}.` User ID: `{user_id}` - **{count}** trackings\n"
+            top_users_lines = [
+                f"  `{i+1}.` User ID: `{user_id}` - **{count}** trackings"
+                for i, (user_id, count) in enumerate(top_10_users)
+            ]
+            top_users_text = "\n".join(top_users_lines) + "\n"
         else:
             top_users_text = "  No users with active trackings found.\n"
 
@@ -103,5 +103,7 @@ async def get_stats(client: Client, message: Message):
         await stats_msg.edit_text(stats_text)
 
     except Exception as e:
-        logger.error(f"Error processing /stats for admin {message.from_user.id}: {e}", exc_info=True)
-        await stats_msg.edit_text(f"❌ **An internal error occurred while generating stats.**\n_The error has been logged for review._")
+        logger.exception(f"Error processing /stats for admin {message.from_user.id}: {e}")
+        await stats_msg.edit_text(
+            "❌ **An internal error occurred while generating stats.**\n_The error has been logged for review._"
+        )
