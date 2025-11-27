@@ -94,9 +94,17 @@ async def trackings_command_handler(client: Client, message: Message):
 @app.on_callback_query(filters.regex(r"^info_"))
 async def product_info_handler(client: Client, callback_query: CallbackQuery):
     """Handles button clicks to show detailed info about a tracked product."""
-    product_id = callback_query.data.split("_", 1)[1]
-    user_id = callback_query.from_user.id
     
+    # Extract ID from callback data (e.g., "info_12345" -> "12345")
+    try:
+        product_id = callback_query.data.split("_", 1)[1]
+    except IndexError:
+        await callback_query.answer("⚠️ Invalid request data.", show_alert=True)
+        return
+
+    user_id = callback_query.from_user.id
+
+    # 1. Fetch Product from Database
     try:
         product_doc = products.find_one({"_id": product_id, "userid": user_id})
     except Exception as e:
@@ -104,44 +112,65 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
         await callback_query.answer("⚠️ An error occurred while fetching product details.", show_alert=True)
         return
 
-
+    # 2. Check if product exists
     if not product_doc:
         await callback_query.answer("⚠️ This product is no longer tracked or does not exist.", show_alert=True)
-        await callback_query.message.delete()
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
         return
 
     api_data = product_doc
-    
-    # Get the first image URL for the preview link
-    images = api_data.get("images", {}).get("initial", [])
+
+    # 3. FIX: Handle Images (List vs Dictionary) safely
+    # This block fixes the AttributeError by checking the data type
+    raw_images = api_data.get("images", [])
+    image_list = []
+
+    if isinstance(raw_images, list):
+        # Case 1: Database has ["url1", "url2"]
+        image_list = raw_images
+    elif isinstance(raw_images, dict):
+        # Case 2: Database has {"initial": ["url1"], "hi_res": [...]}
+        image_list = raw_images.get("initial", [])
+
+    # 4. Generate invisible preview link
     image_preview_link = ""
-    if images:
-        # Use a zero-width space for an invisible link text
-        image_preview_link = f"[\u200b]({images[0]})"
-        
+    if image_list and len(image_list) > 0:
+        # Use a zero-width space [\u200b] for an invisible link text
+        image_preview_link = f"[\u200b]({image_list[0]})"
+
     preview_options = LinkPreviewOptions(
         show_above_text=True,
-        prefer_small_media =True)
+        prefer_small_media=True
+    )
 
-    
-    # Construct the message caption with the hidden image link at the top
+    # 5. Extract Data safely for the caption
+    name = api_data.get('product_name', 'N/A')
+    original_price = api_data.get('original_price', {}).get('string', 'N/A')
+    current_price = api_data.get('current_price', {}).get('string', 'N/A')
+    discount = api_data.get('discount_percentage', 'N/A')
+    rating = api_data.get('rating', 'N/A')
+    reviews = api_data.get('reviews_count', 0)
+
+    # Construct the message caption
     caption = (
         f"{image_preview_link}"
-        f"**{api_data.get('product_name', 'N/A')}**\n\n"
-        f"**Price:** ~~{api_data.get('original_price', {}).get('string', 'N/A')}~~ "
-        f"→ **{api_data.get('current_price', {}).get('string', 'N/A')}** "
-        f"`({api_data.get('discount_percentage', 'N/A')})`\n"
-        f"**Rating:** {api_data.get('rating', 'N/A')} ({api_data.get('reviews_count', 0)} ratings)\n\n"
+        f"**{name}**\n\n"
+        f"**Price:** ~~{original_price}~~ → **{current_price}** `({discount})`\n"
+        f"**Rating:** {rating} ({reviews} ratings)\n\n"
     )
-    
+
+    # 6. Create Keyboard
     keyboard = InlineKeyboardMarkup(
         [[
             InlineKeyboardButton("❌ Stop Tracking", callback_data=f"stp_tracking_{product_id}"),
             InlineKeyboardButton("🔙 Back", callback_data="back_to_trackings")
         ]]
     )
-    
 
+    # 7. Edit the message
     try:
         await callback_query.message.edit_text(
             text=caption,
@@ -149,9 +178,9 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
             link_preview_options=preview_options
         )
     except Exception as e:
-        logger.error(f"Telegram API error editing product info message for user {user_id}: {e}", exc_info=True)
+        logger.error(f"Telegram API error editing product info for user {user_id}: {e}", exc_info=True)
         await callback_query.answer("⚠️ Could not display product details.", show_alert=True)
-
+        
 
 @app.on_callback_query(filters.regex(r"^stp_tracking_"))
 async def stop_tracking_handler(client: Client, callback_query: CallbackQuery):
