@@ -1,3 +1,5 @@
+aiohttp
+pyrogram
 flask
 tgcrypto
 httpx
@@ -5,3 +7,4 @@ pyrotgfork
 pymongo
 json5
 dnspython
+
