@@ -1,5 +1,4 @@
 aiohttp
-pyrogram==2.0.106
 tgcrypto
 flask
 httpx
@@ -7,5 +6,6 @@ pyrotgfork
 pymongo
 json5
 dnspython
+
 
 
