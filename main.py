@@ -1,3 +1,6 @@
+from aiohttp import web
+from plugins import web_server
+from typing import Union, Optional, AsyncGenerator
 import asyncio
 from pyrogram import Client, idle
 from config import Telegram, Server
@@ -12,35 +15,31 @@ async def price_check_runner(client: Client):
         await run_price_check(client, manual_trigger=False)
         await asyncio.sleep(18000)
 
-app = Client(
-    Telegram.BOT_NICKNAME,
-    api_id=Telegram.API_ID,
-    api_hash=Telegram.API_HASH,
-    bot_token=Telegram.BOT_TOKEN,
-    plugins=dict(root="plugins"),
-)
+class Bot(Client):
 
-def main():
-    async def startup():
+    def __init__(self):
+        super().__init__(
+            name=BOT_NICKNAME,
+            api_id=API_ID,
+            api_hash=API_HASH,
+            bot_token=BOT_TOKEN,
+            workers=50,
+            plugins={"root": "plugins"},
+            sleep_threshold=5,
+        )
+
+    async def start(self):
         try:
             await app.send_message(Telegram.ADMIN, "Bot restarted")
             asyncio.create_task(price_check_runner(app))
         except Exception as e:
             print(f"Failed to send message: {e}")
+            
+        app = web.AppRunner(await web_server())
+        await app.setup()
+        bind_address = "0.0.0.0"
+        await web.TCPSite(app, bind_address, PORT).start()
 
-    # Initiate logger
-    logger = init_logger(app, __name__)
-    print("Bot started")
 
-    # Start the Web Server
-    if Server.IS_SERVER:
-        start_web_server()
-
-    # Start Pyrogram Client
-    app.start()
-    app.loop.run_until_complete(startup())
-    idle()
-    app.stop()
-
-if __name__ == "__main__":
-    main()
+app = Bot()
+app.run()
