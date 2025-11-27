@@ -19,10 +19,10 @@ class Bot(Client):
 
     def __init__(self):
         super().__init__(
-            name=BOT_NICKNAME,
-            api_id=API_ID,
-            api_hash=API_HASH,
-            bot_token=BOT_TOKEN,
+            name=Telegram.BOT_NICKNAME,
+            api_id=Telegram.API_ID,
+            api_hash=Telegram.API_HASH,
+            bot_token=Telegram.BOT_TOKEN,
             workers=50,
             plugins={"root": "plugins"},
             sleep_threshold=5,
