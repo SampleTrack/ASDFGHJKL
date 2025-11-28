@@ -44,7 +44,7 @@ def run_flask():
 
         # Get the PORT from environment variables (Required for Cloud Hosting)
         # Default to 7860 if no variable is found
-        http_port = int(os.environ.get("PORT", 7860))
+        http_port = int(os.environ.get("PORT", 8080))
         
         print(f"--- Flask Server starting on Port {http_port} ---")
         web_app.run(host="0.0.0.0", port=http_port)
