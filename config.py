@@ -1,43 +1,38 @@
 import os
+import re
 
-class Telegram:
-    # Use "0" as default for integers to prevent ValueError on empty strings
-    API_ID = int(os.getenv("API_ID", "0"))
-    API_HASH = os.getenv("API_HASH", "")
-    BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-    BOT_NICKNAME = os.getenv("BOT_NICKNAME", "")
+# === BASIC CONFIG === #
+API_ID = int(os.getenv("API_ID", "0"))
+API_HASH = os.getenv("API_HASH", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_NAME = os.getenv("BOT_NAME", "")
 
-    ADMIN = int(os.getenv("ADMIN", "0"))
+ADMINS = int(os.getenv("ADMINS", "0"))
 
-    # Force Sub
-    # Fixed typo: Fusb_name -> FSUB_NAME to match naming convention
-    FSUB_NAME = os.getenv("Fusb_name", "@botio_devs")
-    FSUB_ID = int(os.getenv("Fsub_ID", "-1002054575318"))
-    FSUB_LINK = os.getenv("Fsub_Link", "https://t.me/+9Mxv8UvcoPw0MjA9")
+# === FORCE SUB SETTINGS === #
+FUSB_NAME = os.getenv("FUSB_NAME", "@botio_devs")
+FSUB_ID = int(os.getenv("FSUB_ID", "-1002054575318"))
+FSUB_LINK = os.getenv("FSUB_LINK", "https://t.me/+9Mxv8UvcoPw0MjA9")
 
-    # LOGGING
-    SEND_JOIN_LOG = True
-    LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", "-1001914822368"))
-    
-    # Assigning the same ID to multiple variables
-    JOIN_LOG_CHANNEL = LOG_CHANNEL_ID
-    ERROR_LOGGER_ID = LOG_CHANNEL_ID
-    CHANNEL_ID = LOG_CHANNEL_ID
+# === LOGGING === #
+SEND_JOIN_LOG = True
+LOG_CHANNEL = int(os.getenv("LOG_CHANNEL", "0"))
 
-    CHECKER_LOG_TOPIC = 3
-    ERROR_LOGGER_TOPIC = 38
+JOIN_LOG_CHANNEL = LOG_CHANNEL
+ERROR_LOGGER_ID = LOG_CHANNEL
+CHANNEL_ID = LOG_CHANNEL
 
-    # Button Links
-    UPDATES_CHANNEL = "https://t.me/botio_devs"
-    SUPPORT_CHANNEL = "https://t.me/botio_devs_discuss"
+CHECKER_LOG_TOPIC = 3
+ERROR_LOGGER_TOPIC = 38
 
+# === BUTTON LINKS === #
+UPDATES_CHANNEL = "https://t.me/botio_devs"
+SUPPORT_CHANNEL = "https://t.me/botio_devs_discuss"
 
-class Db:
-    MONGO_URI = os.getenv("MONGO_URI", "your mongo uri")
-    DB_NAME = "ecom-tracker"
+# === DATABASE === #
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_NAME = ""
 
-
-class Server:
-    PORT = 8080
-    # Best practice for Env booleans: Check if the string equals "true"
-    IS_SERVER = os.getenv("IS_SERVER", "False").lower() == "true"
+# === SERVER SETTINGS === #
+PORT = int(os.getenv("PORT", "8080"))
+IS_SERVER = os.getenv("IS_SERVER", "False").lower() == "true"
