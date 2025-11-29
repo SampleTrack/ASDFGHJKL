@@ -36,22 +36,41 @@ back_button = InlineKeyboardMarkup([
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start(client: Client, message: Message):
-    """Reply start message with buttons"""
     try:
-        user_id = message.from_user.id
-        await add_user(user_id, client)
+        user = message.from_user
+        user_id = user.id
+        username = f"@{user.username}" if user.username else "no_username"
+        full_name = " ".join(filter(None, (user.first_name, user.last_name)))
+        chat_type = message.chat.type if message.chat else "private"
+
+        if not await db.is_user_exist(user_id):
+            await db.add_user(user_id, client)
+
+        ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
         
+        try:
+            await client.send_message(
+                chat_id=CHANNEL_ID,
+                text=Script.LOG_MESSAGE.format(user_id=user_id, username=username, full_name=full_name, chat_type=chat_type, date=ist_now.strftime('%d/%m/%Y'), time=ist_now.strftime('%I:%M:%S %p'))
+                disable_web_page_preview=True
+            )
+        except Exception as send_err:
+            logger.warning("Failed to send start log message to channel: %s", send_err)
+
         await message.reply_text(
-            text=Script.START_TEXT.format(mention=message.from_user.mention),
+            text=Script.START_TEXT.format(mention=user.mention),
             disable_web_page_preview=True,
             reply_markup=start_buttons(user_id),
             quote=True
         )
+
     except Exception as e:
-        print(f"Error in start: {e}")
-        await message.reply("An error occurred.", quote=True)
-
-
+        logger.exception("Error in start handler: %s", e)
+        try:
+            await message.reply_text("An internal error occurred. Please try again later.", quote=True)
+        except Exception:
+            logger.exception("Also failed to send error reply to user.")
+            
 @Client.on_message(filters.command("help") & filters.private)
 async def help_command(client: Client, message: Message):
     """Reply help message"""
