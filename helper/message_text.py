@@ -1,4 +1,4 @@
-from config import Telegram
+from config import FUSB_NAME, FSUB_LIN, UPDATES_CHANNEL, SUPPORT_CHANNEL
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
 class text_messages():
@@ -44,7 +44,7 @@ class text_messages():
 𝒮𝓉𝒶𝓎 𝓊𝓅𝒹𝒶𝓉𝑒𝒹, 𝓈𝒶𝓋𝑒 𝓂𝑜𝓃𝑒𝓎 💰, 𝒶𝓃𝒹 𝓃𝑒𝓋𝑒𝓇 𝓂𝒾𝓈𝓈 𝒶 𝒹𝑒𝒶𝓁! 🚀
 
 """
-  Fsub_text = f"**⚠️Access Denied!⚠️\n\nPlease Join [{Telegram.FSUB_NAME}]({Telegram.FSUB_LINK}) to use me. If you joined click check again button to confirm.**"
+  Fsub_text = f"**⚠️Access Denied!⚠️\n\nPlease Join [{FUSB_NAME}]({FSUB_LINK}) to use me. If you joined click check again button to confirm.**"
 
   verification_text = """
 **Sorry! 🥺🥹**   
@@ -62,14 +62,14 @@ Unlock **all 20 bots** with **no ad-limits** until **11:59 PM** by completing a 
 class message_buttons():
   Fsub_buttons = InlineKeyboardMarkup(
     [
-      [InlineKeyboardButton("🍀join 🍀", url=Telegram.FSUB_LINK)]
+      [InlineKeyboardButton("🍀join 🍀", url=FSUB_LINK)]
     ]
   )
 
   start_buttons = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("UPDATES", url=Telegram.UPDATES_CHANNEL),
-            InlineKeyboardButton("SUPPORT", url=Telegram.SUPPORT_CHANNEL)
+            InlineKeyboardButton("UPDATES", url=UPDATES_CHANNEL),
+            InlineKeyboardButton("SUPPORT", url=SUPPORT_CHANNEL)
         ],
         [
             InlineKeyboardButton("ABOUT", callback_data="about")
