@@ -6,7 +6,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 # Local imports
 from config import ADMINS, LOG_CHANNEL, UPDATES_CHANNEL, SUPPORT_CHANNEL
 from helper.database import add_user, all_users
-from script import Script
+from Script import script
 
 
 def start_buttons(user_id):
