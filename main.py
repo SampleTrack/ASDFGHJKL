@@ -57,7 +57,7 @@ def main():
     if IS_SERVER:
         flask_thread = threading.Thread(target=run_flask, daemon=True)
         flask_thread.start()
-
+    
     app.start()
     app.loop.run_until_complete(startup())
     idle()
