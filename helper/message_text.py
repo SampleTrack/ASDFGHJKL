@@ -1,4 +1,4 @@
-from config import FUSB_NAME, FSUB_LIN, UPDATES_CHANNEL, SUPPORT_CHANNEL
+from config import FUSB_NAME, FSUB_LINK, UPDATES_CHANNEL, SUPPORT_CHANNEL
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
 class text_messages():
