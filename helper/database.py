@@ -1,15 +1,14 @@
-
 from pymongo import MongoClient
 import logging
-from config import Telegram, Db
+from config import DATABASE_URL, DATABASE_NAME
 
 
 
 
-client = MongoClient(Db.MONGO_URI)
+client = MongoClient(DATABASE_URL)
 
-users = client[Db.DB_NAME]['users']
-products = client[Db.DB_NAME]['products']
+users = client[DATABASE_NAME]['users']
+products = client[DATABASE_NAME]['products']
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -24,7 +23,7 @@ logger.setLevel(logging.INFO)
 
 async def send_join_log(client, log_message):
     try:
-      if Telegram.SEND_JOIN_LOG:
+      if SEND_JOIN_LOG:
         await client.send_message(
           chat_id=CHANNEL_ID,
           text=log_message
