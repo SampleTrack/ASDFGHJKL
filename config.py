@@ -30,8 +30,8 @@ UPDATES_CHANNEL = "https://t.me/botio_devs"
 SUPPORT_CHANNEL = "https://t.me/botio_devs_discuss"
 
 # === DATABASE === #
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-DATABASE_NAME = ""
+DATABASE_URL = environ.get('DATABASE_URL', "")
+DATABASE_NAME = environ.get('DATABASE_NAME', "")
 
 # === SERVER SETTINGS === #
 PORT = int(os.getenv("PORT", 8080))
