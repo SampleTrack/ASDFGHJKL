@@ -1,19 +1,19 @@
 import os, random, asyncio
-from pyrogram import Client as app, filters, types, enums, errors
+from pyrogram import Client, filters, types, enums, errors
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from pyrogram.errors import UserNotParticipant, FloodWait, UserDeactivated, UserIsBlocked
 
 # Local imports
-from config import Telegram
+from config import ADMINS, FSUB_ID
 from helper.database import add_user, all_users, users, remove_user
 from helper.message_text import text_messages, message_buttons
 
 
-# @app.on_message(filters.command("start"))
+# @Client.on_message(filters.command("start"))
 # async def start_command(client, message):
 #     user_id = message.from_user.id
 #     try:
-#         await client.get_chat_member(Telegram.Fsub_ID, user_id)
+#         await client.get_chat_member(FSUB_ID, user_id)
 #         await add_user(user_id, client)
 #         await message.reply_text(
 #             text_messages.start_text,
@@ -30,7 +30,7 @@ from helper.message_text import text_messages, message_buttons
 #         print(f"Error in start function: {e}")
 
 
-@app.on_message(filters.command("start"))
+@Client.on_message(filters.command("start"))
 async def start(client, message):
     """Reply start message"""
     try:
@@ -47,7 +47,7 @@ async def start(client, message):
         await message.reply("An error occurred. Please try again later.")
 
 
-@app.on_message(filters.command("help"))
+@Client.on_message(filters.command("help"))
 async def help_command(client, msg: types.Message):
     """Reply help message"""
     try:
@@ -61,7 +61,7 @@ async def help_command(client, msg: types.Message):
         await msg.reply("An error occurred. Please try again later.")
 
 
-@app.on_message(filters.command("users") & filters.user(Telegram.ADMIN))
+@Client.on_message(filters.command("users") & filters.user(ADMINS))
 async def users(client, message):
     """Show user count"""
     try:
@@ -76,7 +76,7 @@ async def users(client, message):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast Copy ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-@app.on_message(filters.command("bcast") & filters.user(Telegram.ADMIN))
+@Client.on_message(filters.command("bcast") & filters.user(ADMINS))
 async def bcast(_, m: Message):
     if not m.reply_to_message:
         await m.reply_text("❌ Please reply to a message to broadcast it.")
@@ -129,7 +129,7 @@ async def bcast(_, m: Message):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast Forward ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-@app.on_message(filters.command("fcast") & filters.user(Telegram.ADMIN))
+@Client.on_message(filters.command("fcast") & filters.user(ADMINS))
 async def fcast(_, m: Message):
     if not m.reply_to_message:
         await m.reply_text("❌ Please reply to a message to forward-broadcast it.")
