@@ -50,8 +50,15 @@ async def start(client: Client, message: Message):
         
         try:
             await client.send_message(
-                chat_id=CHANNEL_ID,
-                text=Script.LOG_MESSAGE.format(user_id=user_id, username=username, full_name=full_name, chat_type=chat_type, date=ist_now.strftime('%d/%m/%Y'), time=ist_now.strftime('%I:%M:%S %p'))
+                chat_id=LOG_CHANNEL,
+                text=script.LOG_MESSAGE.format(
+                    user_id=user_id,
+                    username=username,
+                    full_name=full_name,
+                    chat_type=chat_type,
+                    date=ist_now.strftime('%d/%m/%Y'),
+                    time=ist_now.strftime('%I:%M:%S %p')
+                ),
                 disable_web_page_preview=True
             )
         except Exception as send_err:
@@ -76,7 +83,7 @@ async def help_command(client: Client, message: Message):
     """Reply help message"""
     try:
         await message.reply_text(
-            text=Script.HELP_TEXT,
+            text=script.HELP_TEXT,
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True,
             reply_markup=back_button,
@@ -92,7 +99,7 @@ async def about_command(client: Client, message: Message):
     """Reply about message"""
     try:
         await message.reply_text(
-            text=Script.ABOUT_TEXT,
+            text=script.ABOUT_TEXT,
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True,
             reply_markup=back_button,
