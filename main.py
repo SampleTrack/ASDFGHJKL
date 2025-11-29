@@ -1,36 +1,12 @@
+# main.py
 import asyncio
-import threading
-import logging
 from pyrogram import Client, idle
-from flask import Flask
-from config import API_ID, API_HASH, BOT_TOKEN, BOT_NAME, ADMINS, IS_SERVER, PORT 
+from config import API_ID, API_HASH, BOT_TOKEN, BOT_NAME, ADMINS, IS_SERVER
 from helper.logger_setup import init_logger
 from helper.price_checker import run_price_check
 
-
-web_app = Flask(__name__)
-
-
-@web_app.route("/")
-def hello_world():
-    return "Hello, World!"
-
-
-async def price_check_runner(client: Client):
-    while True:
-        await run_price_check(client, manual_trigger=False)
-        await asyncio.sleep(18000)  
-
-
-def run_flask():
-    try:
-        log = logging.getLogger("werkzeug")
-        log.setLevel(logging.ERROR)
-        web_app.logger.setLevel(logging.ERROR)
-        web_app.run(host="0.0.0.0", port=PORT)
-    except Exception:
-        logging.exception("Flask server crashed!")
-
+# Import the server function we just created
+from server import start_server 
 
 app = Client(
     BOT_NAME,
@@ -40,29 +16,46 @@ app = Client(
     plugins=dict(root="plugins"),
 )
 
-
-def main():
-    async def startup():
+async def price_check_runner(client: Client):
+    print("Price check runner started...")
+    while True:
         try:
-            await app.send_message(ADMINS, "Bot restarted")
-            # start background task after bot is up
-            asyncio.create_task(price_check_runner(app))
+            await run_price_check(client, manual_trigger=False)
         except Exception as e:
-            print(f"Failed to send message: {e}")
+            print(f"Error in price checker: {e}")
+        # Sleep for 5 hours (18000 seconds)
+        await asyncio.sleep(18000)  
 
-    # initiate logger
-    logger = init_logger(app, __name__)
-    print("Bot started")
-
-    if IS_SERVER:
-        flask_thread = threading.Thread(target=run_flask, daemon=True)
-        flask_thread.start()
-    
-    app.start()
-    app.loop.run_until_complete(startup())
-    idle()
-    app.stop()
-
+async def startup():
+    try:
+        # Send a message to admins so you know it restarted
+        for admin in ADMINS:
+            try:
+                await app.send_message(admin, "Bot restarted and is online!")
+            except Exception:
+                pass
+        
+        # Start the background task
+        asyncio.create_task(price_check_runner(app))
+    except Exception as e:
+        print(f"Failed to run startup tasks: {e}")
 
 if __name__ == "__main__":
-    main()
+    # 1. Initiate Logger
+    logger = init_logger(app, __name__)
+    print("Bot initializing...")
+
+    # 2. Start the Web Server (Keep Alive) if on Server
+    if IS_SERVER:
+        print("Starting Web Server...")
+        start_server()
+
+    # 3. Start the Bot
+    app.start()
+    
+    # 4. Run startup tasks (background runner)
+    app.loop.run_until_complete(startup())
+    
+    print("Bot is now Idle and Running.")
+    idle()
+    app.stop()
