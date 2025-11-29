@@ -1,9 +1,9 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from helper.price_checker import run_price_check
-from config import Telegram
+from config import ADMINS
 
-@Client.on_message(filters.command("check") & filters.user(Telegram.ADMIN))
+@Client.on_message(filters.command("check") & filters.user(ADMINS))
 async def check_product_prices(client: Client, message: Message):
     """Trigger a manual price check (admin only)."""
     try:
