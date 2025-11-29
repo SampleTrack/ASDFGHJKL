@@ -19,7 +19,7 @@ from pyrogram.errors import (
     MessageNotModified
 )
 
-from config import LOG_CHANNEL, CHECKER_LOG_TOPIC, 
+from config import LOG_CHANNEL, CHECKER_LOG_TOPIC
 from helper.database import products, users
 
 # --- Configuration & Setup ---
