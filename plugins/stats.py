@@ -1,17 +1,17 @@
 import time
-from pyrogram import Client as app, Client, filters
+from pyrogram import Client, filters
 from pyrogram.types import Message
 from helper.database import users, products
-from config import Telegram
+from config import ADMINS
 from collections import defaultdict
 import logging
 
 logger = logging.getLogger(__name__)
 
-@app.on_message(
+@Client.on_message(
     filters.command("stats") &
     filters.private &
-    filters.user(Telegram.ADMIN)
+    filters.user(ADMINS)
 )
 async def get_stats(client: Client, message: Message):
     """
