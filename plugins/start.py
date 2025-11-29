@@ -1,182 +1,119 @@
-import os, random, asyncio
-from pyrogram import Client, filters, types, enums, errors
+import os
+import time
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-from pyrogram.errors import UserNotParticipant, FloodWait, UserDeactivated, UserIsBlocked
 
 # Local imports
-from config import ADMINS, FSUB_ID
-from helper.database import add_user, all_users, users, remove_user
-from helper.message_text import TextMessages, MessageButtons
+from config import ADMINS, LOG_CHANNEL, UPDATES_CHANNEL, SUPPORT_CHANNEL
+from helper.database import add_user, all_users
+from script import Script
 
 
+def start_buttons(user_id):
+    """Generates buttons for start message. Adds Admin button if user is Admin."""
+    buttons = [
+        [
+            InlineKeyboardButton("🆘 Support", url=SUPPORT_CHANNEL),
+            InlineKeyboardButton("🛍 Deals", url=UPDATES_CHANNEL)
+        ],
+        [
+            InlineKeyboardButton("ℹ️ About", callback_data="cb_about"),
+            InlineKeyboardButton("📚 Help", callback_data="cb_help")
+        ]
+    ]
+    
+    # Admin Only Button logic
+    if user_id in ADMINS:
+        buttons.append([InlineKeyboardButton("📊 Admin Stats", callback_data="cb_stats")])
+        
+    return InlineKeyboardMarkup(buttons)
 
-# @Client.on_message(filters.command("start"))
-# async def start_command(client, message):
-#     user_id = message.from_user.id
-#     try:
-#         await client.get_chat_member(FSUB_ID, user_id)
-#         await add_user(user_id, client)
-#         await message.reply_text(
-#             TextMessages.start_text,
-#             disable_web_page_preview=True,
-#             reply_to_message_id=message.id,
-#             reply_markup=MessageButtons.start_buttons,
-#         )
-#     except UserNotParticipant:
-#         await message.reply(
-#             TextMessages.Fsub_text,
-#             reply_markup=MessageButtons.Fsub_buttons
-#         )
-#     except Exception as e:
-#         print(f"Error in start function: {e}")
+back_button = InlineKeyboardMarkup([
+    [InlineKeyboardButton("🔙 Back", callback_data="cb_back")]
+])
 
+# --- COMMAND HANDLERS ---
 
-@Client.on_message(filters.command("start"))
-async def start(client, message):
-    """Reply start message"""
+@Client.on_message(filters.command("start") & filters.private)
+async def start(client: Client, message: Message):
+    """Reply start message with buttons"""
     try:
         user_id = message.from_user.id
         await add_user(user_id, client)
+        
         await message.reply_text(
-            TextMessages.start_text,
+            text=Script.START_TEXT.format(mention=message.from_user.mention),
             disable_web_page_preview=True,
-            reply_to_message_id=message.id,
-            reply_markup=MessageButtons.start_buttons,
+            reply_markup=start_buttons(user_id),
+            quote=True
         )
     except Exception as e:
         print(f"Error in start: {e}")
-        await message.reply("An error occurred. Please try again later.")
+        await message.reply("An error occurred.", quote=True)
 
 
-@Client.on_message(filters.command("help"))
-async def help_command(client, msg: types.Message):
+@Client.on_message(filters.command("help") & filters.private)
+async def help_command(client: Client, message: Message):
     """Reply help message"""
     try:
-        await msg.reply(
-            TextMessages.help_text,
+        await message.reply_text(
+            text=Script.HELP_TEXT,
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True,
+            reply_markup=back_button,
+            quote=True
         )
     except Exception as e:
         print(f"Error in help: {e}")
-        await msg.reply("An error occurred. Please try again later.")
+        await message.reply("An error occurred.", quote=True)
 
 
-@Client.on_message(filters.command("users") & filters.user(ADMINS))
-async def users(client, message):
-    """Show user count"""
+@Client.on_message(filters.command("about") & filters.private)
+async def about_command(client: Client, message: Message):
+    """Reply about message"""
     try:
-        xx = all_users()
-        await message.reply(
-            f"🍀 Chats Stats 🍀\n"
-            f"🙋‍♂️ Users : `{xx}`"
+        await message.reply_text(
+            text=Script.ABOUT_TEXT,
+            parse_mode=enums.ParseMode.MARKDOWN,
+            disable_web_page_preview=True,
+            reply_markup=back_button,
+            quote=True
         )
     except Exception as e:
-        print(f"Error in users: {e}")
-        await message.reply("An error occurred. Please try again later.")
+        print(f"Error in about: {e}")
+        await message.reply("An error occurred.", quote=True)
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast Copy ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-@Client.on_message(filters.command("bcast") & filters.user(ADMINS))
-async def bcast(_, m: Message):
-    if not m.reply_to_message:
-        await m.reply_text("❌ Please reply to a message to broadcast it.")
-        return
+# --- ADMIN ONLY COMMANDS ---
 
-    allusers = users
-    lel = await m.reply_text("`⚡️ Processing...`")
-
-    success = failed = deactivated = blocked = 0
-
-    for count, usrs in enumerate(allusers.find(), start=1):
-        userid = usrs.get("user_id")
-        try:
-            await m.reply_to_message.copy(int(userid))
-            success += 1
-        except FloodWait as ex:
-            await asyncio.sleep(ex.value)
-            await m.reply_to_message.copy(int(userid))
-            success += 1
-        except errors.InputUserDeactivated:
-            deactivated += 1
-            remove_user(userid)
-        except errors.UserIsBlocked:
-            blocked += 1
-        except Exception as e:
-            print(f"Failed to send to {userid}: {e}")
-            failed += 1
-
-        # 🔄 Update every 50 users
-        if count % 50 == 0:
-            try:
-                await lel.edit(
-                    f"📢 Broadcasting...\n"
-                    f"✅ Sent: `{success}`\n"
-                    f"❌ Failed: `{failed}`\n"
-                    f"👾 Blocked: `{blocked}`\n"
-                    f"👻 Deactivated: `{deactivated}`\n"
-                    f"📊 Processed: `{count}` users"
-                )
-            except Exception:
-                pass
-
-    # ✅ Final result
-    await lel.edit(
-        f"✅ Successfully sent to `{success}` users.\n"
-        f"❌ Failed to send to `{failed}` users.\n"
-        f"👾 Found `{blocked}` blocked users\n"
-        f"👻 Found `{deactivated}` deactivated users."
-    )
+@Client.on_message(filters.command("logs") & filters.user(ADMINS))
+async def logs(client: Client, message: Message):
+    """Send the error log file"""
+    try:
+        log_file = "bot.log" 
+        if os.path.exists(log_file):
+            await message.reply_document(
+                document=log_file,
+                caption="📄 **Here is your bot log file.**",
+                quote=True
+            )
+        else:
+            await message.reply("❌ No log file found.", quote=True)
+    except Exception as e:
+        print(f"Error in logs: {e}")
+        await message.reply(f"Failed to send logs: {e}", quote=True)
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast Forward ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-@Client.on_message(filters.command("fcast") & filters.user(ADMINS))
-async def fcast(_, m: Message):
-    if not m.reply_to_message:
-        await m.reply_text("❌ Please reply to a message to forward-broadcast it.")
-        return
-
-    allusers = users
-    lel = await m.reply_text("`⚡️ Processing...`")
-
-    success = failed = deactivated = blocked = 0
-
-    for count, usrs in enumerate(allusers.find(), start=1):
-        userid = usrs.get("user_id")
-        try:
-            await m.reply_to_message.forward(int(userid))
-            success += 1
-        except FloodWait as ex:
-            await asyncio.sleep(ex.value)
-            await m.reply_to_message.forward(int(userid))
-            success += 1
-        except errors.InputUserDeactivated:
-            deactivated += 1
-            remove_user(userid)
-        except errors.UserIsBlocked:
-            blocked += 1
-        except Exception as e:
-            print(f"Failed to forward to {userid}: {e}")
-            failed += 1
-
-        # 🔄 Update every 50 users
-        if count % 50 == 0:
-            try:
-                await lel.edit(
-                    f"📢 Forwarding...\n"
-                    f"✅ Forwarded: `{success}`\n"
-                    f"❌ Failed: `{failed}`\n"
-                    f"👾 Blocked: `{blocked}`\n"
-                    f"👻 Deactivated: `{deactivated}`\n"
-                    f"📊 Processed: `{count}` users"
-                )
-            except Exception:
-                pass
-
-    # ✅ Final result
-    await lel.edit(
-        f"✅ Successfully forwarded to `{success}` users.\n"
-        f"❌ Failed to forward to `{failed}` users.\n"
-        f"👾 Found `{blocked}` blocked users \n"
-        f"👻 Found `{deactivated}` deactivated users."
-    )
+@Client.on_message(filters.command("ping") & filters.user(ADMINS))
+async def ping(client: Client, message: Message):
+    """Check bot latency"""
+    try:
+        start_time = time.time()
+        msg = await message.reply("🏓 Pinging...", quote=True)
+        end_time = time.time()
+        
+        latency = round((end_time - start_time) * 1000)
+        await msg.edit(f"🏓 **Pong!**\nLatency: `{latency}ms`")
+    except Exception as e:
+        print(f"Error in ping: {e}")
+        
