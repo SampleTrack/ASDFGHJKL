@@ -1,5 +1,5 @@
 import logging
-from pyrogram import Client as app, Client, filters
+from pyrogram import Client, filters
 from pyrogram.types import LinkPreviewOptions
 from pyrogram.types import (
     Message,
@@ -85,13 +85,13 @@ async def list_trackings_handler(client: Client, entity):
         logger.error(f"Telegram API error sending tracking list to user {user_id}: {e}", exc_info=True)
 
 
-@app.on_message(filters.command("my_trackings") & filters.private)
+@Client.on_message(filters.command("my_trackings") & filters.private)
 async def trackings_command_handler(client: Client, message: Message):
     """Handles the /trackings command."""
     await list_trackings_handler(client, message)
 
 
-@app.on_callback_query(filters.regex(r"^info_"))
+@Client.on_callback_query(filters.regex(r"^info_"))
 async def product_info_handler(client: Client, callback_query: CallbackQuery):
     """Handles button clicks to show detailed info about a tracked product."""
     
@@ -182,7 +182,7 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
         await callback_query.answer("⚠️ Could not display product details.", show_alert=True)
         
 
-@app.on_callback_query(filters.regex(r"^stp_tracking_"))
+@Client.on_callback_query(filters.regex(r"^stp_tracking_"))
 async def stop_tracking_handler(client: Client, callback_query: CallbackQuery):
     """Handles the 'Stop Tracking' button click."""
     product_id = callback_query.data.replace("stp_tracking_", "", 1)
@@ -203,7 +203,7 @@ async def stop_tracking_handler(client: Client, callback_query: CallbackQuery):
     await list_trackings_handler(client, callback_query)
 
 
-@app.on_callback_query(filters.regex(r"^back_to_trackings"))
+@Client.on_callback_query(filters.regex(r"^back_to_trackings"))
 async def back_to_trackings_handler(client: Client, callback_query: CallbackQuery):
     """Handles the 'Back' button click."""
     await list_trackings_handler(client, callback_query)
