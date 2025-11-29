@@ -8,11 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@Client.on_message(
-    filters.command("stats") &
-    filters.private &
-    filters.user(ADMINS)
-)
+@Client.on_message(filters.command("stats") & filters.private & filters.user(ADMINS))
 async def get_stats(client: Client, message: Message):
     """
     Handles the /stats command for admins.
