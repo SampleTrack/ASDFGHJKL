@@ -6,7 +6,8 @@ from pyrogram.errors import UserNotParticipant, FloodWait, UserDeactivated, User
 # Local imports
 from config import ADMINS, FSUB_ID
 from helper.database import add_user, all_users, users, remove_user
-from helper.message_text import text_messages, message_buttons
+from helper.message_text import TextMessages, MessageButtons
+
 
 
 # @Client.on_message(filters.command("start"))
@@ -16,15 +17,15 @@ from helper.message_text import text_messages, message_buttons
 #         await client.get_chat_member(FSUB_ID, user_id)
 #         await add_user(user_id, client)
 #         await message.reply_text(
-#             text_messages.start_text,
+#             TextMessages.start_text,
 #             disable_web_page_preview=True,
 #             reply_to_message_id=message.id,
-#             reply_markup=message_buttons.start_buttons,
+#             reply_markup=MessageButtons.start_buttons,
 #         )
 #     except UserNotParticipant:
 #         await message.reply(
-#             text_messages.Fsub_text,
-#             reply_markup=message_buttons.Fsub_buttons
+#             TextMessages.Fsub_text,
+#             reply_markup=MessageButtons.Fsub_buttons
 #         )
 #     except Exception as e:
 #         print(f"Error in start function: {e}")
@@ -37,10 +38,10 @@ async def start(client, message):
         user_id = message.from_user.id
         await add_user(user_id, client)
         await message.reply_text(
-            text_messages.start_text,
+            TextMessages.start_text,
             disable_web_page_preview=True,
             reply_to_message_id=message.id,
-            reply_markup=message_buttons.start_buttons,
+            reply_markup=MessageButtons.start_buttons,
         )
     except Exception as e:
         print(f"Error in start: {e}")
@@ -52,7 +53,7 @@ async def help_command(client, msg: types.Message):
     """Reply help message"""
     try:
         await msg.reply(
-            text_messages.help_text,
+            TextMessages.help_text,
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True,
         )
