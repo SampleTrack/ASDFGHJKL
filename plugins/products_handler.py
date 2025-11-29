@@ -6,7 +6,7 @@ import string
 import asyncio
 import tempfile
 import os
-from pyrogram import Client as app, Client, filters
+from pyrogram import Client, filters
 from pyrogram.types import (
     Message, InputMediaPhoto,
     InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -73,7 +73,7 @@ async def download_image(client: httpx.AsyncClient, url: str) -> str | None:
 # A broad regex to capture any valid URL. The API will handle unsupported domains.
 URL_REGEX = r"https?://[^\s]+"
 
-@app.on_message(filters.regex(URL_REGEX, re.IGNORECASE) & filters.private)
+@Client.on_message(filters.regex(URL_REGEX, re.IGNORECASE) & filters.private)
 async def product_link_handler(client: Client, message: Message):
     """Handles incoming e-commerce links using the new centralized API endpoint."""
     product_url = message.matches[0].group(0)
@@ -181,7 +181,7 @@ async def product_link_handler(client: Client, message: Message):
             except OSError as e:
                 logger.error(f"Error removing temp file {path}: {e}")
 
-@app.on_callback_query(filters.regex(r"^track_"))
+@Client.on_callback_query(filters.regex(r"^track_"))
 async def track_button_handler(client: Client, callback_query: CallbackQuery):
     """Handles the 'Start Tracking' button click and saves data to the database."""
     product_id = callback_query.data.split("_", 1)[1]
