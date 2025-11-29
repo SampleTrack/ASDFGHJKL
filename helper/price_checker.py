@@ -19,7 +19,7 @@ from pyrogram.errors import (
     MessageNotModified
 )
 
-from config import Telegram
+from config import LOG_CHANNEL, CHECKER_LOG_TOPIC, 
 from helper.database import products, users
 
 # --- Configuration & Setup ---
@@ -167,8 +167,8 @@ async def save_and_send_logs(client: Client, summary_text: str, log_file_path: s
     """Sends the summary, then the log file if it's not empty, and finally deletes it."""
     try:
         await client.send_message(
-            chat_id=Telegram.LOG_CHANNEL_ID,
-            reply_to_message_id=Telegram.CHECKER_LOG_TOPIC,
+            chat_id=LOG_CHANNEL,
+            reply_to_message_id=CHECKER_LOG_TOPIC,
             text=summary_text,
         )
     except Exception as e:
@@ -177,10 +177,10 @@ async def save_and_send_logs(client: Client, summary_text: str, log_file_path: s
     try:
         if os.path.exists(log_file_path) and os.path.getsize(log_file_path) > 0:
             await client.send_document(
-                chat_id=Telegram.LOG_CHANNEL_ID,
+                chat_id=LOG_CHANNEL,
                 document=log_file_path,
                 caption=f"📋 Price Check Logs for {datetime.now().strftime('%Y-%m-%d')}",
-                reply_to_message_id=Telegram.CHECKER_LOG_TOPIC,
+                reply_to_message_id=CHECKER_LOG_TOPIC,
             )
         else:
             print(f"INFO: Log file '{log_file_path}' not sent because it is missing or empty.")
