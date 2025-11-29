@@ -35,4 +35,4 @@ DATABASE_NAME = os.getenv('DATABASE_NAME', "")
 
 # === SERVER SETTINGS === #
 PORT = int(os.getenv("PORT", 8080))
-IS_SERVER = os.getenv("IS_SERVER", "False").lower() == "true" 
+IS_SERVER = os.getenv("IS_SERVER", "TRUE").lower() == "TRUE" 
