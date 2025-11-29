@@ -1,4 +1,4 @@
-class Script:
+class script:
     """
     Class to hold all text messages for the bot.
     """
