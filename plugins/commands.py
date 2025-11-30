@@ -77,11 +77,9 @@ async def start(client: Client, message: Message):
         )
 
     except Exception as e:
-        logger.exception("Error in start handler: %s", e)
-        try:
-            await message.reply_text("An internal error occurred. Please try again later.", quote=True)
-        except Exception:
-            logger.exception("Also failed to send error reply to user.")
+        print(f"Error in start: {e}")
+        await message.reply("An error occurred.", quote=True)
+
             
 @Client.on_message(filters.command("help") & filters.private)
 async def help(client: Client, message: Message):
