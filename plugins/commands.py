@@ -5,7 +5,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
 # Local imports
 from config import ADMINS, LOG_CHANNEL, UPDATES_CHANNEL, SUPPORT_CHANNEL
-from helper.database import add_user, all_users
+from database.database import db
 from Script import script
 
 
@@ -79,7 +79,7 @@ async def start(client: Client, message: Message):
             logger.exception("Also failed to send error reply to user.")
             
 @Client.on_message(filters.command("help") & filters.private)
-async def help_command(client: Client, message: Message):
+async def help(client: Client, message: Message):
     """Reply help message"""
     try:
         await message.reply_text(
@@ -95,7 +95,7 @@ async def help_command(client: Client, message: Message):
 
 
 @Client.on_message(filters.command("about") & filters.private)
-async def about_command(client: Client, message: Message):
+async def about(client: Client, message: Message):
     """Reply about message"""
     try:
         await message.reply_text(
