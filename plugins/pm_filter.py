@@ -4,7 +4,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQ
 # Local imports
 from config import ADMINS, UPDATES_CHANNEL, SUPPORT_CHANNEL
 from helper.database import all_users
-from script import Script
+from Script import Script
 
 
 def get_start_buttons(user_id):
