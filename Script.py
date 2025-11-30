@@ -61,3 +61,14 @@ Use **/my_trackings** ᴛᴏ ꜱᴇᴇ ᴀʟʟ ᴘʀᴏᴅᴜᴄᴛꜱ ʏᴏᴜ�
         f"Date (IST): `{date}`\n"
         f"Time (IST): `{time}`\n"
     )
+    STARTUP_LOG_TXT = (
+        "<b>#BotStarted</b>\n"
+        "<b>Bot Name:</b> {bot_name} (@{bot_username})\n"
+        "<b>Date (IST):</b> <code>{date}</code>\n"
+        "<b>Time (IST):</b> <code>{time}</code>\n"
+        "<b>Status:</b> <code>Online & Idle</code>"
+    )
+
+    # Admin Alert Message
+    ADMIN_RESTART_MSG = "<b>Bot has been restarted and is now online!</b>"
+    
