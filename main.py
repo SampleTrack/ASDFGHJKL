@@ -1,13 +1,14 @@
 import asyncio
 import datetime
 import pytz
-from pyrogram import Client, idle, compose
+from pyrogram import Client, idle
 from config import API_ID, API_HASH, BOT_TOKEN, BOT_NAME, ADMINS, IS_SERVER, LOG_CHANNEL
 from helper.logger_setup import init_logger
 from helper.price_checker import run_price_check
-from Script import script # Import the text variables
+from Script import script 
 from server import start_server
 
+# Initialize the Client
 app = Client(
     BOT_NAME,
     api_id=API_ID,
@@ -23,6 +24,10 @@ async def price_check_runner(client: Client):
         try:
             # manual_trigger=False means it runs automatically
             await run_price_check(client, manual_trigger=False)
+        except asyncio.CancelledError:
+            # This allows the task to stop gracefully when we shut down the bot
+            print("Price check runner stopped.")
+            break
         except Exception as e:
             print(f"Error in price checker: {e}")
         
@@ -40,21 +45,17 @@ async def get_ist_time():
 async def send_startup_logs(client: Client):
     """Sends logs to Admins and the Log Channel."""
     try:
-        # 1. Get Bot Info for the log
         me = await client.get_me()
         date, time = await get_ist_time()
 
-        # 2. Notify Admins
+        # Notify Admins
         for admin in ADMINS:
             try:
-                await client.send_message(
-                    chat_id=admin, 
-                    text=script.ADMIN_RESTART_MSG
-                )
-            except Exception as e:
-                print(f"Could not send start msg to admin {admin}: {e}")
+                await client.send_message(chat_id=admin, text=script.ADMIN_RESTART_MSG)
+            except Exception:
+                pass # Ignore errors if admin blocks bot
 
-        # 3. Send formatted log to Log Channel
+        # Log to Channel
         if LOG_CHANNEL:
             try:
                 log_text = script.STARTUP_LOG_TXT.format(
@@ -63,11 +64,7 @@ async def send_startup_logs(client: Client):
                     date=date,
                     time=time
                 )
-                await client.send_message(
-                    chat_id=LOG_CHANNEL,
-                    text=log_text
-                )
-                print("Startup log sent to channel.")
+                await client.send_message(chat_id=LOG_CHANNEL, text=log_text)
             except Exception as e:
                 print(f"Failed to send log to channel: {e}")
 
@@ -75,35 +72,46 @@ async def send_startup_logs(client: Client):
         print(f"Error in startup logs: {e}")
 
 async def main():
-    # 1. Start the Web Server if on Server
+    # --- STEP 1: Server Check ---
     if IS_SERVER:
         print("Starting Web Server...")
         start_server()
 
-    # 2. Initialize Logger
+    # --- STEP 2: Init Logger ---
     init_logger(app, __name__)
     print("Bot initializing...")
 
-    # 3. Start the Bot Client
+    # --- STEP 3: Start Telegram Client ---
     await app.start()
     
-    # 4. Run Startup Tasks (Logs & Background runner)
-    # We use create_task for the loop so it doesn't block the main thread
-    asyncio.create_task(price_check_runner(app))
+    # --- STEP 4: Start Background Task ---
+    # We assign it to a variable 'task' so we can control it later
+    task = asyncio.create_task(price_check_runner(app))
     
-    # Send the notifications
+    # Send Notifications
     await send_startup_logs(app)
+    print("Bot is successfully started and running.")
+
+    # --- STEP 5: The Infinite Loop (IDLE) ---
+    try:
+        # This line freezes the code here. It acts like a wall.
+        # Nothing below this runs until you stop the bot.
+        await idle()
     
-    print("Bot is now Idle and Running.")
+    except Exception as e:
+        print(f"Bot stopped due to error: {e}")
     
-    # 5. Idle (Keep bot running)
-    await idle()
-    
-    # 6. Stop
-    await app.stop()
+    finally:
+        # --- STEP 6: The Shutdown Sequence ---
+        # This ONLY runs when the idle() loop is broken (Ctrl+C or Server Restart)
+        print("Shutting down bot...")
+        
+        # A. Stop the background task gracefully
+        task.cancel()
+        
+        # B. Stop the Telegram Client
+        await app.stop()
+        print("Bot Stopped. Goodbye!")
 
 if __name__ == "__main__":
-    # This automatically creates the event loop and runs main()
     app.run(main())
-    
-    
