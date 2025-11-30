@@ -29,8 +29,16 @@ def start_buttons(user_id):
         ]
     ]
     
+    # --- FIX START ---
+    # Ensure admin_list is always a list, even if config is just an int
+    if isinstance(ADMINS, int):
+        admin_list = [ADMINS]
+    else:
+        admin_list = ADMINS
+        
     # Admin Only Button logic
-    if user_id in ADMINS:
+    if user_id in admin_list:
+    # --- FIX END ---
         buttons.append([InlineKeyboardButton("📊 Admin Stats", callback_data="cb_stats")])
         
     return InlineKeyboardMarkup(buttons)
