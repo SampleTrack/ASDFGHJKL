@@ -1,6 +1,8 @@
 import os
 import time
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
@@ -70,7 +72,7 @@ async def start(client: Client, message: Message):
             logger.warning("Failed to send start log message to channel: %s", send_err)
 
         await message.reply_text(
-            text=Script.START_TEXT.format(mention=user.mention),
+            text=script.START_TEXT.format(mention=user.mention),
             disable_web_page_preview=True,
             reply_markup=start_buttons(user_id),
             quote=True
