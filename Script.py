@@ -54,11 +54,10 @@ Use **/my_trackings** ᴛᴏ ꜱᴇᴇ ᴀʟʟ ᴘʀᴏᴅᴜᴄᴛꜱ ʏᴏᴜ�
         "🙋‍♂️ **Total Users:** `{}`"
     )
     LOG_MESSAGE = (
-        "📥 New /start received\n"
-        "User ID: `{user_id}`\n"
-        "Username: `{username}`\n"
-        "Full name: `{full_name}`\n"
-        "Chat type: `{chat_type}`\n"
-        "Date (IST): `{date}`\n"
-        "Time (IST): `{time}`\n"
-)
+        f"#New User\n"
+        f"User ID: `{user_id}`\n"
+        f"Username: {full_name}{username}\n"
+        f"Chat type: `{chat_type}`\n"
+        f"Date (IST): `{date}`\n"
+        f"Time (IST): `{time}`\n"
+    )
