@@ -7,3 +7,4 @@ pymongo
 json5
 dnspython
 motor 
+tzdata
