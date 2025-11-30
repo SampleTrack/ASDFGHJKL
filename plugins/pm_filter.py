@@ -4,7 +4,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQ
 # Local imports
 from config import ADMINS, UPDATES_CHANNEL, SUPPORT_CHANNEL
 from helper.database import all_users
-from Script import Script
+from Script import script
 
 
 def get_start_buttons(user_id):
@@ -38,7 +38,7 @@ async def callback_handlers(client: Client, query: CallbackQuery):
         # Help Button
         if data == "cb_help":
             await query.message.edit_text(
-                text=Script.HELP_TEXT,
+                text=script.HELP_TEXT,
                 reply_markup=back_button,
                 disable_web_page_preview=True
             )
@@ -46,7 +46,7 @@ async def callback_handlers(client: Client, query: CallbackQuery):
         # About Button
         elif data == "cb_about":
             await query.message.edit_text(
-                text=Script.ABOUT_TEXT,
+                text=script.ABOUT_TEXT,
                 reply_markup=back_button,
                 disable_web_page_preview=True
             )
@@ -54,7 +54,7 @@ async def callback_handlers(client: Client, query: CallbackQuery):
         # Back Button (Returns to Start)
         elif data == "cb_back":
             await query.message.edit_text(
-                text=Script.START_TEXT.format(mention=query.from_user.mention),
+                text=script.START_TEXT.format(mention=query.from_user.mention),
                 reply_markup=get_start_buttons(user_id),
                 disable_web_page_preview=True
             )
