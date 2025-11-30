@@ -54,12 +54,12 @@ Use **/my_trackings** ᴛᴏ ꜱᴇᴇ ᴀʟʟ ᴘʀᴏᴅᴜᴄᴛꜱ ʏᴏᴜ�
         "🙋‍♂️ **Total Users:** `{}`"
     )
     LOG_MESSAGE = (
-        f"#New User\n"
-        f"User ID: `{user_id}`\n"
-        f"Username: {full_name}{username}\n"
-        f"Chat type: `{chat_type}`\n"
-        f"Date (IST): `{date}`\n"
-        f"Time (IST): `{time}`\n"
+        "#New User\n"
+        "User ID: `{user_id}`\n"
+        "Username: {full_name}{username}\n"
+        "Chat type: `{chat_type}`\n"
+        "Date (IST): `{date}`\n"
+        "Time (IST): `{time}`\n"
     )
     STARTUP_LOG_TXT = (
         "<b>#BotStarted</b>\n"
