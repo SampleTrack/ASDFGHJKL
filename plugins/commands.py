@@ -52,10 +52,8 @@ async def start(client: Client, message: Message):
 
         if not await db.is_user_exist(user_id):
             await db.add_user(user_id, client)
-
-        ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
-        
-        try:
+            ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
+            
             await client.send_message(
                 chat_id=LOG_CHANNEL,
                 text=script.LOG_MESSAGE.format(
@@ -68,9 +66,7 @@ async def start(client: Client, message: Message):
                 ),
                 disable_web_page_preview=True
             )
-        except Exception as send_err:
-            logger.warning("Failed to send start log message to channel: %s", send_err)
-
+            
         await message.reply_text(
             text=script.START_TEXT.format(mention=user.mention),
             disable_web_page_preview=True,
@@ -79,7 +75,7 @@ async def start(client: Client, message: Message):
         )
 
     except Exception as e:
-        print(f"Error in start: {e}")
+        logger.error(f"Error in start: {e}") 
         await message.reply("An error occurred.", quote=True)
 
             
