@@ -11,8 +11,6 @@ from helper.price_checker import run_price_check
 from Script import script 
 from plugins import web_server
 
-# Initialize logger (assuming this function works)
-init_logger()
 
 async def price_check_runner(client: Client):
     while True:
