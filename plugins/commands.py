@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
@@ -7,6 +8,10 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from config import ADMINS, LOG_CHANNEL, UPDATES_CHANNEL, SUPPORT_CHANNEL
 from database.database import db
 from Script import script
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def start_buttons(user_id):
