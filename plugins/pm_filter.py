@@ -3,7 +3,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQ
 
 # Local imports
 from config import ADMINS, UPDATES_CHANNEL, SUPPORT_CHANNEL
-from helper.database import all_users
+from database.database import db
 from Script import script
 
 
@@ -62,7 +62,7 @@ async def callback_handlers(client: Client, query: CallbackQuery):
         # Admin Stats Button (Popup)
         elif data == "cb_stats":
             if user_id in ADMINS:
-                total = await all_users() 
+                total = await db.all_users() 
                 await query.answer(
                     f"📊 Bot Statistics\n\nTotal Users: {total}", 
                     show_alert=True
