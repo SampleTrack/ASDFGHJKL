@@ -62,7 +62,7 @@ async def callback_handlers(client: Client, query: CallbackQuery):
         # Admin Stats Button (Popup)
         elif data == "cb_stats":
             if user_id in ADMINS:
-                total = await db.all_users() 
+                total = await db.get_all_users() 
                 await query.answer(
                     f"📊 Bot Statistics\n\nTotal Users: {total}", 
                     show_alert=True
