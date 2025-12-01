@@ -3,23 +3,28 @@ import datetime
 import pytz
 import logging
 from aiohttp import web
-from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, BOT_NAME, ADMINS, IS_SERVER, LOG_CHANNEL, PORT
+from pyrogram import Client, idle
+from config import API_ID, API_HASH, BOT_TOKEN, BOT_NAME, LOG_CHANNEL, PORT
 from helper.logger_setup import init_logger
 from helper.price_checker import run_price_check
-from Script import script
-from plugins import web_server  # assumed to be an async function returning aiohttp.web.Application
+from plugins import web_server  # Assuming this returns a web.Application object or routes
 
+# Initialize Logger
+init_logger()
 
 async def price_check_runner(client: Client):
     """Runs run_price_check every 5 hours (18000 seconds)."""
+    logging.info("Starting Price Check Loop...")
     while True:
         try:
+            # wait 10 seconds before first run to let bot settle
+            await asyncio.sleep(10) 
             await run_price_check(client, manual_trigger=False)
         except Exception as e:
             logging.exception("Error in price_check_runner: %s", e)
+        
+        # Wait for 5 hours
         await asyncio.sleep(18000)
-
 
 async def get_ist_time():
     """Helper to get current Date and Time in India."""
@@ -29,7 +34,6 @@ async def get_ist_time():
     time_str = now.strftime("%I:%M:%S %p")
     return date_str, time_str
 
-
 class Bot(Client):
     def __init__(self):
         super().__init__(
@@ -37,77 +41,46 @@ class Bot(Client):
             api_id=API_ID,
             api_hash=API_HASH,
             bot_token=BOT_TOKEN,
-            plugins=dict(root="plugins"),
+            workers=50,
+            plugins={"root": "plugins"},
+            sleep_threshold=10,
         )
 
     async def start(self):
-        # call parent's start first
         await super().start()
-        logging.info("Bot Started via Pyrogram")
-        # initialize logger (if your helper sets up handlers)
-        try:
-            init_logger()
-        except Exception:
-            logging.exception("init_logger failed, continuing without custom logger")
+        me = await self.get_me()
+        self.mention = me.mention
+        self.username = me.username
+        
+        logging.info(f"{me.first_name} Started Successfully!")
 
-        try:
-            # use self (not a stray 'client' name)
-            me = await self.get_me()
-            date, time = await get_ist_time()
+        # 1. Send Startup Log to Channel
+        if LOG_CHANNEL:
+            try:
+                date, time = await get_ist_time()
+                await self.send_message(
+                    chat_id=LOG_CHANNEL,
+                    text=f"**🤖 Bot Restarted**\n\n📅 Date: `{date}`\n⏰ Time: `{time}`"
+                )
+            except Exception as e:
+                logging.error(f"Failed to send startup log: {e}")
 
-            # notify admins
-            for admin in ADMINS or []:
-                try:
-                    await self.send_message(chat_id=admin, text=script.ADMIN_RESTART_MSG)
-                except Exception:
-                    logging.exception("Failed to notify admin %s", admin)
+        # 2. Start the Web Server (for Render/Heroku/Health checks)
+        app = web.AppRunner(await web_server())
+        await app.setup()
+        bind_address = "0.0.0.0"
+        await web.TCPSite(app, bind_address, PORT).start()
+        logging.info(f"Web Server initialized on port {PORT}")
 
-            # send startup log to channel if available
-            if LOG_CHANNEL:
-                try:
-                    log_text = script.STARTUP_LOG_TXT.format(
-                        bot_name=getattr(me, "first_name", BOT_NAME),
-                        bot_username=getattr(me, "username", ""),
-                        date=date,
-                        time=time,
-                    )
-                    await self.send_message(chat_id=LOG_CHANNEL, text=log_text)
-                except Exception:
-                    logging.exception("Failed to send startup log to LOG_CHANNEL")
-
-        except Exception:
-            logging.exception("Error while running startup notifications")
-
-        # Start web server (if provided) and price checker runner
-        try:
-            # web_server is assumed to be async and to return aiohttp.web.Application
-            if callable(web_server):
-                web_app = await web_server()
-                runner = web.AppRunner(web_app)
-                await runner.setup()
-                bind_address = "0.0.0.0"
-                site = web.TCPSite(runner, bind_address, PORT)
-                await site.start()
-                logging.info("Web Server Running on Port %s", PORT)
-            else:
-                logging.warning("web_server is not callable; skipping web server setup")
-        except Exception:
-            logging.exception("Failed to start web server")
-
-        # start background price checker
-        try:
-            asyncio.create_task(price_check_runner(self))
-            logging.info("Price check runner started")
-        except Exception:
-            logging.exception("Failed to create price check task")
+        # 3. Start the Background Price Check Task
+        # asyncio.create_task ensures this runs in the background without blocking the bot
+        asyncio.create_task(price_check_runner(self))
+        logging.info("Background tasks started.")
 
     async def stop(self, *args):
         await super().stop()
-        logging.info("Bot stopped. Bye.")
-
+        logging.info("Bot Stopped.")
 
 if __name__ == "__main__":
-    # Optional: basic logging config if you don't have a logging setup elsewhere
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    app = Bot()
-    app.run()  # this blocks and handles start/stop lifecycle
+    bot = Bot()
+    bot.run()
