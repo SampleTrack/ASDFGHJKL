@@ -5,7 +5,7 @@ from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBu
 from pyrogram.types import LinkPreviewOptions
 from helper.database import products, users  # adjust import path if your project uses a different module
 from plugins.my_trackings import list_trackings_handler  # import helper to refresh lists
-from config import ADMINS, SUPPORT_LINK, DEALS_LINK  # ensure these constants exist in your config
+from config import ADMINS, SUPPORT_CHANNEL, UPDATES_CHANNEL  # ensure these constants exist in your config
 from Script import script  # script.START_TEXT, HELP_TEXT, ABOUT_TEXT
 from database.database import db  # if your project uses db helper for admin stats (used in pm_filter)
 
@@ -15,8 +15,8 @@ def get_start_buttons(user_id):
     """Helper to generate start buttons for the start/back menu."""
     buttons = [
         [
-            InlineKeyboardButton("🆘 Support", url=SUPPORT_LINK),
-            InlineKeyboardButton("🛍 Deals", url=DEALS_LINK)
+           InlineKeyboardButton("🆘 Support", url=SUPPORT_CHANNEL),
+            InlineKeyboardButton("🛍 Deals", url=UPDATES_CHANNEL)
         ],
         [
             InlineKeyboardButton("ℹ️ About", callback_data="cb_about"),
