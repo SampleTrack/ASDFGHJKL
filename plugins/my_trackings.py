@@ -1,16 +1,17 @@
 import logging
-from pyrogram import Client, filters
-from pyrogram.types import LinkPreviewOptions
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, LinkPreviewOptions
+from pyrogram import Client as app, Client, filters
+from pyrogram.types import (
+    Message,
+    InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+)
 from helper.database import products, users
 
 logger = logging.getLogger(__name__)
 
-
+# --- SHARED FUNCTION (Called by command and callback) ---
 async def list_trackings_handler(client: Client, entity):
     """
     Displays the user's list of tracked products.
-    This is a helper function called by the command and callback handlers.
     """
     if isinstance(entity, Message):
         user_id = entity.from_user.id
@@ -50,7 +51,6 @@ async def list_trackings_handler(client: Client, entity):
         return
 
     if not product_docs:
-        # This handles the case where user has IDs but product collection is empty/references are broken
         text = ("😔 **You are not tracking any products yet.**\n"
                 "Looks like your previous trackings were removed. "
                 "Send a new link to start!")
@@ -81,8 +81,9 @@ async def list_trackings_handler(client: Client, entity):
         logger.error(f"Telegram API error sending tracking list to user {user_id}: {e}", exc_info=True)
 
 
-@Client.on_message(filters.command("my_trackings") & filters.private)
+# --- COMMAND HANDLER ---
+@app.on_message(filters.command("my_trackings") & filters.private)
 async def trackings_command_handler(client: Client, message: Message):
     """Handles the /trackings command."""
     await list_trackings_handler(client, message)
-
+    
