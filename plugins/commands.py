@@ -125,7 +125,7 @@ async def about(client: Client, message: Message):
 async def logs(client: Client, message: Message):
     """Send the error log file"""
     try:
-        log_file = "bot.log" 
+        log_file = "TelegramBot.log" 
         if os.path.exists(log_file):
             await message.reply_document(
                 document=log_file,
