@@ -1,6 +1,6 @@
 # plugins/callbacks.py
 import logging
-from pyrogram import Client
+from pyrogram import Client, filters
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.types import LinkPreviewOptions
 from helper.database import products, users  # adjust import path if your project uses a different module
