@@ -57,9 +57,23 @@ async def callback_handlers(client: Client, query: CallbackQuery):
 
         # BACK -> start text with start buttons
         elif data == "cb_back":
+            buttons = [
+                [
+                    InlineKeyboardButton("🆘 Support", url=SUPPORT_CHANNEL),
+                    InlineKeyboardButton("🛍 Deals", url=UPDATES_CHANNEL)
+                ],
+                [
+                    InlineKeyboardButton("ℹ️ About", callback_data="cb_about"),
+                    InlineKeyboardButton("📚 Help", callback_data="cb_help")
+                ]
+            ]
+            if user_id in ADMINS:
+                buttons.append(
+                    [InlineKeyboardButton("📊 Admin Stats", callback_data="cb_stats")]
+                )
             await query.message.edit_text(
                 text=script.START_TEXT.format(mention=query.from_user.mention),
-                reply_markup=get_start_buttons(user_id),
+                reply_markup=InlineKeyboardMarkup(buttons),
                 disable_web_page_preview=True
             )
 
