@@ -1,10 +1,15 @@
 import random
 import string
+import asyncio
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from config import Config
 from helper.database import db
 from helper.utils import fetch_product_info
+
+# Temporary dictionary to store data before the user clicks "Start Tracking"
+# Structure: {'unique_session_id': {product_data}}
+PENDING_TRACKS = {}
 
 # Regex for URLs
 url_pattern = r"https?://[^\s]+"
@@ -16,32 +21,34 @@ async def process_link(client, message):
         return
 
     url = message.matches[0].group(0)
-    status = await message.reply("🔎 **Fetching details...**")
+    status = await message.reply("🔎 **Fetching product details...**", quote=True)
 
+    # 1. Fetch Data from API
     data = await fetch_product_info(url)
     
     if not data or not data.get('dealsData'):
-        return await status.edit("❌ **Error:** Could not fetch product details. Unsupported link or API error.")
+        return await status.edit("❌ **Error:** Could not fetch product details. The link might be invalid or unsupported.")
 
     product_data = data['dealsData']['product_data']
     currency = data.get('currencySymbol', '₹')
     
-    # Generate unique ID for tracking
-    tracking_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-    
-    # Clean Price
+    # 2. Parse Price
     price_str = str(product_data.get('cur_price', '0'))
     try:
         price_int = int(float(price_str.replace(',', '').replace(currency, '').strip()))
     except:
         price_int = 0
 
-    # Save to Pending dict (in memory) or directly save to DB with a flag. 
-    # For simplicity, we save directly but users must confirm via button if needed, 
-    # but here we assume sending link = want to track.
+    # 3. Create a Unique Session ID for this specific interaction
+    # This acts as a key to retrieve the data later when button is clicked
+    session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
     
-    db_item = {
-        "_id": tracking_id,
+    # 4. Prepare Data Object (But don't save to DB yet!)
+    # We use the product's PID (or URL hash) as the real DB ID to prevent duplicates
+    real_product_id = str(product_data.get('pid', '')) or ''.join(random.choices(string.ascii_letters, k=12))
+
+    temp_data = {
+        "_id": real_product_id, # The ID that will be used in MongoDB
         "product_name": product_data.get('name', 'Unknown'),
         "url": url,
         "current_price": {"string": price_str, "int": price_int},
@@ -49,30 +56,92 @@ async def process_link(client, message):
         "image": product_data.get('thumbnailImages', [''])[0],
         "source": product_data.get('site_name', 'Unknown')
     }
-    
-    # Save Product
-    await db.add_product(db_item)
-    # Link to User
-    await db.add_tracking_to_user(user_id, tracking_id)
 
+    # Store in memory
+    PENDING_TRACKS[session_id] = temp_data
+
+    # 5. Create Buttons
     text = f"""
-**✅ Product Added to Tracking!**
+**🛒 Product Preview**
 
-**Name:** {db_item['product_name'][:50]}...
+**Name:** {temp_data['product_name'][:60]}...
 **Price:** {currency}{price_str}
-**Source:** {db_item['source']}
+**Source:** {temp_data['source']}
 
-I will notify you when the price changes.
+__Do you want to start tracking this item?__
 """
     
-    keyb = InlineKeyboardMarkup([[InlineKeyboardButton("🗑️ Remove", callback_data=f"del_{tracking_id}")]])
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Start Tracking", callback_data=f"track_{session_id}")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="cancel_track")]
+    ])
     
-    # Attempt to send with image
+    # 6. Send Preview
     try:
-        await message.reply_photo(photo=db_item['image'], caption=text, reply_markup=keyb)
+        await message.reply_photo(
+            photo=temp_data['image'], 
+            caption=text, 
+            reply_markup=buttons
+        )
         await status.delete()
-    except:
-        await status.edit(text, reply_markup=keyb)
+    except Exception as e:
+        # Fallback if image fails
+        await status.edit(text, reply_markup=buttons)
+
+
+@Client.on_callback_query(filters.regex(r"^track_"))
+async def start_tracking_handler(client, callback: CallbackQuery):
+    """
+    Triggered when user clicks 'Start Tracking'
+    """
+    session_id = callback.data.split("_")[1]
+    user_id = callback.from_user.id
+
+    # 1. Retrieve data from memory
+    product_data = PENDING_TRACKS.get(session_id)
+
+    if not product_data:
+        return await callback.answer("⚠️ Session expired. Please send the link again.", show_alert=True)
+
+    try:
+        # 2. Add to Database
+        # Note: add_product might fail if it exists, so we wrap in try/catch or handle inside db function
+        # Using try/except is safer here in case your DB logic throws error on duplicate key
+        try:
+            await db.add_product(product_data)
+        except:
+            pass # Product likely exists already, which is fine
+
+        # 3. Link to User
+        await db.add_tracking_to_user(user_id, product_data['_id'])
+
+        # 4. Clean up memory
+        del PENDING_TRACKS[session_id]
+
+        # 5. Edit Message to confirm
+        new_text = f"""
+**✅ Tracking Started!**
+
+**Name:** {product_data['product_name'][:50]}...
+**Current Price:** {product_data['currency']}{product_data['current_price']['string']}
+
+I will notify you when the price drops.
+"""
+        await callback.message.edit_caption(
+            caption=new_text,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑️ Remove Tracking", callback_data=f"del_{product_data['_id']}")]]),
+        )
+
+    except Exception as e:
+        await callback.answer(f"Error: {e}", show_alert=True)
+
+
+@Client.on_callback_query(filters.regex("cancel_track"))
+async def cancel_handler(client, callback):
+    await callback.message.delete()
+
+
+# --- EXISTING DELETE AND LIST HANDLERS ---
 
 @Client.on_callback_query(filters.regex(r"^del_"))
 async def delete_track(client, callback):
