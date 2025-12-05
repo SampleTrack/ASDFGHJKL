@@ -2,6 +2,9 @@ import os
 from os import environ
 import re
 
+id_pattern = re.compile(r'^.\d+$')
+
+
 # === BASIC CONFIG === #
 API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
