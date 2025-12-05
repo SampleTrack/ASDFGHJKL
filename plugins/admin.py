@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import shutil
 import asyncio
@@ -7,6 +8,7 @@ from pyrogram.errors import FloodWait
 from config import Config
 from Script import Script
 from helper.database import db
+
 
 @Client.on_message(filters.command("stats") & filters.user(Config.ADMINS))
 async def stats_handler(client, message):
@@ -128,3 +130,84 @@ async def broadcast_handler(client, message):
             failed += 1
             
     await msg.edit(f"**Broadcast Complete**\n✅ Success: {success}\n❌ Failed: {failed}")
+
+
+@Client.on_message(filters.command("find_commands") & filters.user(Config.ADMINS))
+async def find_commands_handler(client, message):
+    """
+    Scans the 'plugins' folder and automatically finds all registered commands.
+    """
+    status_msg = await message.reply("🔄 **Scanning repository for commands...**")
+    
+    command_report = []
+    total_count = 0
+
+    # 1. Regex Pattern to find: filters.command("name") or filters.command(["name1", "name2"])
+    # It captures the text inside the parentheses
+    pattern = re.compile(r'filters\.command\s*\(\s*(?:\[)?(.*?)(?:\])?\s*\)')
+
+    # 2. Walk through all files in the plugins folder
+    for root, dirs, files in os.walk("plugins"):
+        for file in files:
+            if file.endswith(".py"):
+                file_path = os.path.join(root, file)
+                
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        
+                        # Find all matches in this file
+                        matches = pattern.findall(content)
+                        
+                        file_cmds = []
+                        for match in matches:
+                            # Clean the string: remove quotes, spaces, and split by comma
+                            # Example match: '"start", "help"'  ->  ['start', 'help']
+                            raw_cmds = [c.strip().strip('"').strip("'") for c in match.split(',')]
+                            
+                            # Filter out empty strings or kwargs
+                            valid_cmds = [c for c in raw_cmds if c and not "=" in c]
+                            
+                            file_cmds.extend(valid_cmds)
+                        
+                        if file_cmds:
+                            # Remove duplicates and format
+                            unique_cmds = list(set(file_cmds))
+                            total_count += len(unique_cmds)
+                            formatted_cmds = "`, `/".join(unique_cmds)
+                            command_report.append(f"📂 **{file}**:\n  👉 `/{formatted_cmds}`")
+
+                except Exception as e:
+                    pass # Skip file if read error
+
+    # 3. Send the result
+    if not command_report:
+        await status_msg.edit("❌ **No commands found.** (Check if your plugins use `filters.command`)")
+    else:
+        header = f"🤖 **Auto-Detected Commands**\nFound `{total_count}` commands in `{len(command_report)}` files.\n\n"
+        final_text = header + "\n\n".join(command_report)
+        
+        await status_msg.edit(final_text)
+
+
+@Client.on_message(filters.command("commands") & filters.user(Config.ADMINS))
+async def list_commands_handler(client, message):
+    text = """
+**📋 Full Command List**
+
+**👤 User Commands:**
+`/start` - Register & Check if active
+`/help` - How to use the bot
+`/trackings` - View or delete your tracked items
+`[Send Link]` - Auto-detects link to start tracking
+
+**👮‍♂️ Admin Commands:**
+`/stats` - View Total Users, Daily Users & Storage
+`/logs` - Get a filtered `bugs.txt` file (Errors only)
+`/broadcast` - Reply to a message to send to all users
+`/ban [user_id]` - Ban a user from using the bot
+`/unban [user_id]` - Unban a user
+`/ping` - Check server speed (latency)
+`/commands` - Show this list
+"""
+    await message.reply(text)
