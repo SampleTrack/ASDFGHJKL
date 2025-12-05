@@ -40,10 +40,49 @@ async def ping_handler(client, message):
 
 @Client.on_message(filters.command("logs") & filters.user(Config.ADMINS))
 async def log_handler(client, message):
-    if os.path.exists("log.txt"):
-        await message.reply_document("log.txt")
-    else:
-        await message.reply("No log file found.")
+    """
+    Sends a text file containing ONLY Errors and Warnings.
+    Ignores standard INFO logs.
+    """
+    if not os.path.exists("log.txt"):
+        return await message.reply("❌ No log file found.")
+
+    status = await message.reply("🔍 **Scanning logs for errors...**")
+
+    error_lines = []
+    
+    # Read the log file and filter out INFO lines
+    with open("log.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            # We keep lines that are NOT 'INFO'
+            # We also strictly look for ERROR, WARNING, CRITICAL, or Python Tracebacks
+            if any(x in line for x in ["ERROR", "WARNING", "CRITICAL", "Traceback", "Exception"]):
+                error_lines.append(line)
+            # We also keep indented lines because they usually belong to a stack trace
+            elif line.startswith("  ") or line.startswith("\t"):
+                 error_lines.append(line)
+
+    if not error_lines:
+        await status.edit("✅ **System Healthy:** No errors or bugs found in the logs.")
+        return
+
+    # Write the filtered errors to a temporary file
+    temp_file = "bugs.txt"
+    with open(temp_file, "w", encoding="utf-8") as f:
+        f.writelines(error_lines)
+
+    try:
+        await message.reply_document(
+            document=temp_file,
+            caption=f"🐞 **Error Log Report**\nFound `{len(error_lines)}` error lines."
+        )
+    except Exception as e:
+        await message.reply(f"Failed to send logs: {e}")
+    finally:
+        # Cleanup
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+        await status.delete()
 
 @Client.on_message(filters.command("ban") & filters.user(Config.ADMINS))
 async def ban_handler(client, message):
