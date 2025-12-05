@@ -141,30 +141,86 @@ async def cancel_handler(client, callback):
     await callback.message.delete()
 
 
-# --- EXISTING DELETE AND LIST HANDLERS ---
-
-@Client.on_callback_query(filters.regex(r"^del_"))
-async def delete_track(client, callback):
-    track_id = callback.data.split("_")[1]
-    await db.delete_product_tracking(callback.from_user.id, track_id)
-    await callback.answer("Deleted!")
-    await callback.message.delete()
-
+# 1. LIST ALL TRACKINGS
 @Client.on_callback_query(filters.regex("my_trackings"))
-async def my_trackings(client, callback):
-    user = await db.get_user(callback.from_user.id)
+async def my_trackings_list(client, callback):
+    user_id = callback.from_user.id
+    user = await db.get_user(user_id)
+    
+    # Check if user has trackings
     if not user or not user.get("trackings"):
-        return await callback.answer("You are not tracking any items.", show_alert=True)
+        btn = [[InlineKeyboardButton("🔙 Back", callback_data="home_page")]]
+        return await callback.message.edit_text("🤷‍♂️ **You are not tracking any items.**", reply_markup=InlineKeyboardMarkup(btn))
     
     track_ids = user['trackings']
-    if not track_ids:
-         return await callback.answer("You are not tracking any items.", show_alert=True)
-
-    text = "**📦 Your Tracked Items:**\n\n"
     
+    # Generate Buttons for each product
+    buttons = []
     for tid in track_ids:
         prod = await db.get_product(tid)
         if prod:
-            text += f"🔹 [{prod['product_name'][:20]}...]({prod['url']}) - {prod['currency']}{prod['current_price']['string']} (/del_{tid})\n"
-            
-    await callback.message.edit_text(text, disable_web_page_preview=True)
+            # Button Text: Product Name (Truncated)
+            btn_text = f"📦 {prod['product_name'][:25]}..."
+            # Button Data: view_ID
+            buttons.append([InlineKeyboardButton(btn_text, callback_data=f"view_{tid}")])
+    
+    # Add Navigation Buttons
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data="home_page"), InlineKeyboardButton("❌ Cancel", callback_data="close_menu")])
+    
+    await callback.message.edit_text(
+        "**📋 Your Tracked Products:**\nClick on a product to view details or remove it.",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+# 2. VIEW SINGLE PRODUCT DETAILS
+@Client.on_callback_query(filters.regex(r"^view_"))
+async def view_product(client, callback):
+    prod_id = callback.data.split("_")[1]
+    prod = await db.get_product(prod_id)
+    
+    if not prod:
+        await callback.answer("❌ Product not found or deleted.", show_alert=True)
+        # Refresh list automatically
+        return await my_trackings_list(client, callback)
+
+    # Prepare Image Link (Hidden link preview trick)
+    # This allows us to show an image while keeping the message editable
+    image_link = f"[\u200b]({prod['image']})" if prod.get('image') else ""
+    
+    text = (
+        f"{image_link}"
+        f"**📦 {prod['product_name']}**\n\n"
+        f"💰 **Current Price:** {prod['currency']}{prod['current_price']['string']}\n"
+        f"🏪 **Source:** {prod['source']}\n"
+        f"🔗 [Product Link]({prod['url']})"
+    )
+    
+    buttons = [
+        [InlineKeyboardButton("🗑️ Remove Tracking", callback_data=f"del_{prod_id}")],
+        [InlineKeyboardButton("🔙 Back to List", callback_data="my_trackings")]
+    ]
+    
+    # Use LinkPreviewOptions to show the image above the text
+    preview = LinkPreviewOptions(url=prod.get('image'), show_above_text=True, prefer_large_media=True) if prod.get('image') else None
+
+    try:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=InlineKeyboardMarkup(buttons),
+            link_preview_options=preview
+        )
+    except Exception as e:
+        # Fallback if link preview fails
+        await callback.message.edit_text(
+            text=text.replace("\u200b", ""), # remove hidden char
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True
+        )
+
+# 3. REMOVE PRODUCT AND REFRESH LIST
+@Client.on_callback_query(filters.regex(r"^del_"))
+async def delete_product(client, callback):
+    prod_id = callback.data.split("_")[1]
+    await db.delete_product_tracking(callback.from_user.id, prod_id)
+    await callback.answer("✅ Product Removed!", show_alert=False)
+    await my_trackings_list(client, callback)
