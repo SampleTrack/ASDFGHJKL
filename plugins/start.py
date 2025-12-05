@@ -23,40 +23,57 @@ async def start_handler(client, message):
         )
         await client.send_message(Config.LOG_CHANNEL, log_text)
 
-    buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Add to Group", url=f"http://t.me/{client.me.username}?startgroup=true")],
-        [InlineKeyboardButton("📦 My Trackings", callback_data="my_trackings"), InlineKeyboardButton("🆘 Help", callback_data="help_data")]
-    ])
-    
+    buttons = [
+        [
+            InlineKeyboardButton("💬 Support Chat", url="https://t.me/YourSupportChat"),
+            InlineKeyboardButton("📢 Updates", url="https://t.me/YourUpdatesChannel")
+        ],
+        [
+            InlineKeyboardButton("🆘 Help", callback_data="help_page"),
+            InlineKeyboardButton("ℹ️ About", callback_data="about_page")
+        ],
+        [
+            InlineKeyboardButton("📦 My Trackings", callback_data="my_trackings")
+        ]
+    ]
+
+    # Add Admin Stats button ONLY if user is Admin
+    if user_id in Config.ADMINS:
+        buttons.append([InlineKeyboardButton("📊 Admin Stats", callback_data="admin_stats")])
+
     await message.reply_text(
         text=Script.START_TXT.format(first_name=message.from_user.first_name),
-        reply_markup=buttons,
+        reply_markup=InlineKeyboardMarkup(buttons),
         disable_web_page_preview=True
     )
 
-@Client.on_message(filters.command("help") & filters.private)
-async def help_handler(client, message):
-    if await db.is_banned(message.from_user.id):
-        return
-        
-    await message.reply_text(
-        text=Script.HELP_TXT,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="start_data")]]),
-        disable_web_page_preview=True
-    )
-
-@Client.on_callback_query(filters.regex("help_data"))
-async def help_cb(client, callback):
-    await callback.message.edit_text(
-        text=Script.HELP_TXT,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="start_data")]])
-    )
-
-@Client.on_callback_query(filters.regex("start_data"))
-async def start_cb(client, callback):
+@Client.on_callback_query(filters.regex("home_page"))
+async def home_cb(client, callback):
+    # Re-generate the start menu (copy logic from start_handler)
+    user_id = callback.from_user.id
+    buttons = [
+        [InlineKeyboardButton("💬 Support Chat", url="https://t.me/YourSupport"), InlineKeyboardButton("📢 Updates", url="https://t.me/YourChannel")],
+        [InlineKeyboardButton("🆘 Help", callback_data="help_page"), InlineKeyboardButton("ℹ️ About", callback_data="about_page")],
+        [InlineKeyboardButton("📦 My Trackings", callback_data="my_trackings")]
+    ]
+    if user_id in Config.ADMINS:
+        buttons.append([InlineKeyboardButton("📊 Admin Stats", callback_data="admin_stats")])
+    
     await callback.message.edit_text(
         text=Script.START_TXT.format(first_name=callback.from_user.first_name),
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📦 My Trackings", callback_data="my_trackings"), InlineKeyboardButton("🆘 Help", callback_data="help_data")]
-        ])
+        reply_markup=InlineKeyboardMarkup(buttons)
     )
+
+@Client.on_callback_query(filters.regex("help_page"))
+async def help_cb(client, callback):
+    buttons = [[InlineKeyboardButton("🔙 Back", callback_data="home_page"), InlineKeyboardButton("❌ Cancel", callback_data="close_menu")]]
+    await callback.message.edit_text(Script.HELP_TXT, reply_markup=InlineKeyboardMarkup(buttons))
+
+@Client.on_callback_query(filters.regex("about_page"))
+async def about_cb(client, callback):
+    buttons = [[InlineKeyboardButton("🔙 Back", callback_data="home_page"), InlineKeyboardButton("❌ Cancel", callback_data="close_menu")]]
+    await callback.message.edit_text(Script.ABOUT_TXT, reply_markup=InlineKeyboardMarkup(buttons))
+
+@Client.on_callback_query(filters.regex("close_menu"))
+async def close_cb(client, callback):
+    await callback.message.delete()
