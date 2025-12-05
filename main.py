@@ -9,17 +9,24 @@ from helper.database import db
 from helper.utils import fetch_product_info
 from datetime import datetime
 
-# Setup Logging
+# -----------------------------------------------------------------------------
+# 🛠️ SETUP LOGGING (MUST BE GLOBAL)
+# -----------------------------------------------------------------------------
 logging.basicConfig(
-    level=logging.INFO, # We capture INFO, but the command filters them out
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("log.txt"),
         logging.StreamHandler()
     ]
 )
+# Define logger globally so 'check_prices' can see it
+logger = logging.getLogger(__name__)
+logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
-# Flask Server
+# -----------------------------------------------------------------------------
+# 🌐 FLASK SERVER
+# -----------------------------------------------------------------------------
 web_app = Flask(__name__)
 
 @web_app.route('/')
@@ -27,22 +34,30 @@ def home():
     return "Bot is Running!"
 
 def run_flask():
+    # Run Flask on port 8080 (Required for Render)
     web_app.run(host="0.0.0.0", port=Config.PORT)
 
-# Price Checker Logic
+# -----------------------------------------------------------------------------
+# 📉 PRICE CHECKER LOOP
+# -----------------------------------------------------------------------------
 async def check_prices(app):
+    # Wait 30 seconds before starting to allow bot to connect fully
+    await asyncio.sleep(30)
     logger.info("Starting Price Check Loop...")
+    
     while True:
         try:
+            # We iterate over products asynchronously if using Motor
             products = db.products.find({})
             async for product in products:
                 try:
                     url = product.get('url')
                     current_db_price = product.get('current_price', {}).get('int', 0)
                     
+                    # Fetch new data
                     data = await fetch_product_info(url)
                     if not data or not data.get('dealsData'):
-                        continue # Skip invalid API response
+                        continue # Skip if API fails
                         
                     api_prod = data['dealsData']['product_data']
                     currency = data.get('currencySymbol', '₹')
@@ -62,15 +77,19 @@ async def check_prices(app):
                         await db.update_product_price(product['_id'], new_price_str, new_price_int)
                         
                         # Notify Users
-                        users_tracking = await db.users.find({"trackings": product['_id']}).to_list(length=None)
+                        # Convert cursor to list to iterate safely
+                        cursor = db.users.find({"trackings": product['_id']})
+                        users_tracking = await cursor.to_list(length=None)
+                        
                         for user in users_tracking:
                             try:
                                 msg = (f"**🚨 Price Alert!**\n\n"
                                        f"**{product['product_name']}** has {change_type}\n"
                                        f"**New Price:** {currency}{new_price_str}\n"
                                        f"[Check Now]({url})")
+                                
                                 await app.send_message(user['user_id'], msg)
-                                await asyncio.sleep(0.5) # Floodwait prevention
+                                await asyncio.sleep(0.5) # Prevent FloodWait
                             except Exception as e:
                                 logger.error(f"Failed to notify {user['user_id']}: {e}")
 
@@ -80,9 +99,12 @@ async def check_prices(app):
         except Exception as e:
             logger.error(f"Error in main loop: {e}")
         
+        # Wait for the next interval (5 hours)
         await asyncio.sleep(Config.CHECK_INTERVAL)
 
-# Main Bot Start
+# -----------------------------------------------------------------------------
+# 🤖 BOT STARTUP
+# -----------------------------------------------------------------------------
 app = Client(
     "PriceTracker",
     api_id=Config.API_ID,
@@ -117,7 +139,7 @@ async def start_bot():
     await app.stop()
 
 if __name__ == "__main__":
-    # Start Flask in separate thread
+    # Start Flask in a separate thread
     threading.Thread(target=run_flask, daemon=True).start()
     
     # Start Bot
