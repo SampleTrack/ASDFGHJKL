@@ -5,6 +5,7 @@ import shutil
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.errors import FloodWait
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton 
 from config import Config
 from Script import Script
 from helper.database import db
