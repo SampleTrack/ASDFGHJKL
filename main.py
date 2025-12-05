@@ -11,11 +11,13 @@ from datetime import datetime
 
 # Setup Logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO, # We capture INFO, but the command filters them out
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.FileHandler("log.txt"), logging.StreamHandler()]
+    handlers=[
+        logging.FileHandler("log.txt"),
+        logging.StreamHandler()
+    ]
 )
-logger = logging.getLogger(__name__)
 
 # Flask Server
 web_app = Flask(__name__)
