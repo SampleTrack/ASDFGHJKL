@@ -33,6 +33,24 @@ async def stats_handler(client, message):
     )
     await msg.edit(text)
 
+@Client.on_callback_query(filters.regex("admin_stats"))
+async def admin_stats_cb(client, callback):
+    if callback.from_user.id not in Config.ADMINS:
+        return await callback.answer("🔒 Admin only!", show_alert=True)
+
+    total_users = await db.total_users_count()
+    today_users = await db.get_daily_users()
+    total_products = await db.products.count_documents({})
+    
+    total, used, free = shutil.disk_usage(".")
+    storage = f"{used // (2**30)}GB / {total // (2**30)}GB"
+    
+    text = Script.STATS_TXT.format(users=total_users, today=today_users, products=total_products, storage=storage)
+    
+    buttons = [[InlineKeyboardButton("🔙 Back", callback_data="home_page"), InlineKeyboardButton("❌ Cancel", callback_data="close_menu")]]
+    
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+
 @Client.on_message(filters.command("ping"))
 async def ping_handler(client, message):
     start = time.time()
