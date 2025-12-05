@@ -154,38 +154,27 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
     except Exception as e:
         logger.exception(f"info_ error for user {user_id}: {e}")
 
-
-# -----------------------
-# STOP TRACKING callback
-# -----------------------
 @Client.on_callback_query(filters.regex(r"^stp_tracking_"))
-async def stop_tracking_handler(client: Client, cq: CallbackQuery):
-    product_id = cq.data.replace("stp_tracking_", "")
-    user_id = cq.from_user.id
-
+async def stop_tracking_handler(client: Client, callback_query: CallbackQuery):
+    """Handles the 'Stop Tracking' button click."""
+    product_id = callback_query.data.replace("stp_tracking_", "", 1)
+    user_id = callback_query.from_user.id
+    
     try:
-        users.update_one({"user_id": str(user_id)}, {"$pull": {"trackings": product_id}})
-
-        await cq.answer("Stopped!")
-        await list_trackings_handler(client, cq)
+        users.update_one(
+            {"user_id": str(user_id)},
+            {"$pull": {"trackings": product_id}}
+        )
     except Exception as e:
         logger.exception(f"stp_tracking error for user {user_id}: {e}")
+    
+    await callback_query.answer("✅ Product tracking stopped successfully!", show_alert=False)
+    # Refresh the tracking list
+    await list_trackings_handler(client, callback_query)
 
 
-# -----------------------
-# BACK TO TRACKINGS callback
-# -----------------------
-@Client.on_callback_query(filters.regex(r"^back_to_trackings$"))
-async def back_to_trackings_handler(client: Client, cq: CallbackQuery):
-    try:
-        await list_trackings_handler(client, cq)
-        await cq.answer()
-    except Exception as e:
-        logger.exception(f"back_to_trackings error for user {cq.from_user.id}: {e}")
-
-
-
-
-
-
-
+@Client.on_callback_query(filters.regex(r"^back_to_trackings"))
+async def back_to_trackings_handler(client: Client, callback_query: CallbackQuery):
+    """Handles the 'Back' button click."""
+    await list_trackings_handler(client, callback_query)
+    
