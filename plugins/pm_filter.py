@@ -3,6 +3,7 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, LinkPreviewOptions
 
+from helper.database import products, users
 from plugins.my_trackings import list_trackings_handler  # import helper to refresh lists
 from config import ADMINS, SUPPORT_CHANNEL, UPDATES_CHANNEL  # ensure these constants exist in your config
 from Script import script  # script.START_TEXT, HELP_TEXT, ABOUT_TEXT
