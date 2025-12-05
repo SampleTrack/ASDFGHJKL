@@ -7,7 +7,7 @@ API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 BOT_NAME = os.getenv("BOT_NAME", "")
 
-ADMINS = int(os.getenv("ADMINS", "0"))
+ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ.get('ADMINS', '').split()]
 
 # === FORCE SUB SETTINGS === #
 FUSB_NAME = os.getenv("FUSB_NAME", "@botio_devs")
