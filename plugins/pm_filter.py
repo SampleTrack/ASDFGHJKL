@@ -95,39 +95,62 @@ async def cb_stats_handler(client: Client, query: CallbackQuery):
 # PRODUCT INFO callback
 # -----------------------
 @Client.on_callback_query(filters.regex(r"^info_"))
-async def product_info_handler(client: Client, cq: CallbackQuery):
-    product_id = cq.data.split("_", 1)[1]
-    user_id = cq.from_user.id
-
+async def product_info_handler(client: Client, callback_query: CallbackQuery):
+    """Handles button clicks to show detailed info about a tracked product."""
+    product_id = callback_query.data.split("_", 1)[1]
+    user_id = callback_query.from_user.id
+    
     try:
         product_doc = products.find_one({"_id": product_id, "userid": user_id})
-        if not product_doc:
-            await cq.answer("Not available", show_alert=True)
-            return
+    except Exception as e:
+        logger.error(f"DB Error fetching product info {product_id} for user {user_id}: {e}", exc_info=True)
+        await callback_query.answer("⚠️ An error occurred while fetching product details.", show_alert=True)
+        return
 
-        images = product_doc.get("images", {}).get("initial", [])
-        preview = f"[\u200b]({images[0]})" if images else ""
 
-        caption = (
-            f"{preview}**{product_doc.get('product_name', 'N/A')}**\n\n"
-            f"**Price:** ~~{product_doc['original_price']['string']}~~ → "
-            f"**{product_doc['current_price']['string']}** "
-            f"({product_doc.get('discount_percentage', 'N/A')})\n"
-            f"**Rating:** {product_doc.get('rating')} "
-            f"({product_doc.get('reviews_count', 0)} reviews)\n"
-        )
+    if not product_doc:
+        await callback_query.answer("⚠️ This product is no longer tracked or does not exist.", show_alert=True)
+        await callback_query.message.delete()
+        return
 
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("❌ Stop Tracking", callback_data=f"stp_tracking_{product_id}"),
-             InlineKeyboardButton("🔙 Back", callback_data="back_to_trackings")]
-        ])
+    api_data = product_doc
+    
+    # Get the first image URL for the preview link
+    images = api_data.get("images", {}).get("initial", [])
+    image_preview_link = ""
+    if images:
+        # Use a zero-width space for an invisible link text
+        image_preview_link = f"[\u200b]({images[0]})"
+        
+    preview_options = LinkPreviewOptions(
+        show_above_text=True,
+        prefer_small_media =True)
 
-        await cq.message.edit_text(
-            caption,
+    
+    # Construct the message caption with the hidden image link at the top
+    caption = (
+        f"{image_preview_link}"
+        f"**{api_data.get('product_name', 'N/A')}**\n\n"
+        f"**Price:** ~~{api_data.get('original_price', {}).get('string', 'N/A')}~~ "
+        f"→ **{api_data.get('current_price', {}).get('string', 'N/A')}** "
+        f"`({api_data.get('discount_percentage', 'N/A')})`\n"
+        f"**Rating:** {api_data.get('rating', 'N/A')} ({api_data.get('reviews_count', 0)} ratings)\n\n"
+    )
+    
+    keyboard = InlineKeyboardMarkup(
+        [[
+            InlineKeyboardButton("❌ Stop Tracking", callback_data=f"stp_tracking_{product_id}"),
+            InlineKeyboardButton("🔙 Back", callback_data="back_to_trackings")
+        ]]
+    )
+    
+
+    try:
+        await callback_query.message.edit_text(
+            text=caption,
             reply_markup=keyboard,
-            link_preview_options=LinkPreviewOptions(show_above_text=True)
+            link_preview_options=preview_options
         )
-        await cq.answer()
     except Exception as e:
         logger.exception(f"info_ error for user {user_id}: {e}")
 
