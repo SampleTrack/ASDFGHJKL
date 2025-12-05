@@ -2,50 +2,46 @@ class Script:
     START_TXT = """
 **👋 Hello {first_name}!**
 
-I am an advanced **E-commerce Price Tracker Bot**. 📉
+I am your **E-commerce Price Tracker Bot**. 📉
 
-I can track prices for products on **Amazon** and **Flipkart**.
-Just send me a product link, and I will notify you when the price drops! 🔔
-
-**Commands:**
-/trackings - View your tracked items
-/help - How to use me
+I track **Amazon** and **Flipkart** prices for you.
+Send me a link to start, or use the buttons below to manage your items.
 """
 
     HELP_TXT = """
 **ℹ️ How to Use:**
 
-1. **Copy Link:** Go to Amazon or Flipkart and copy the product link.
-2. **Send Link:** Paste the link here.
-3. **Track:** Click the 'Start Tracking' button.
+1. **Copy Link:** Copy a product URL from Amazon/Flipkart.
+2. **Send Link:** Paste it here.
+3. **Track:** I will auto-detect it.
 
 **Manage Trackings:**
-Use /trackings to view or delete items you are watching.
-
-**Support:**
-Contact: @YourSupportHandle
+Click **"📦 My Trackings"** to see your list. You can remove items there.
 """
 
     ABOUT_TXT = """
-**🤖 Name:** Price Tracker Bot
-**📢 Channel:** [Updates Channel](https://t.me/YourChannel)
-**👨‍💻 Dev:** [Developer](https://t.me/YourDev)
-**📚 Language:** Python 3 (Pyrogram)
-**🗄️ Database:** MongoDB (Motor)
+**🤖 About Me**
+
+**Name:** Price Tracker Bot
+**Version:** v2.0 (Async)
+**Dev:** BotIO Devs
+**Language:** Python 3 (Pyrogram)
+**Database:** MongoDB (Motor)
+
+__Keeping your wallet safe since 2025.__
 """
 
+    # Keep your existing STATS_TXT, BAN_TXT, etc.
     STATS_TXT = """
-**📊 Bot Statistics**
+**📊 Admin Statistics**
 
 **👥 Total Users:** `{users}`
 **📅 Users Today:** `{today}`
 **📦 Total Tracked Products:** `{products}`
 **📉 Storage Used:** `{storage}`
 """
-
-    BAN_TXT = "🚫 **You are banned from using this bot.**"
+    BAN_TXT = "🚫 **You are banned.**"
     
-    # Logger Texts
     NEW_USER_LOG = """
 **#New_User**
 **User:** [{name}](tg://user?id={id})
