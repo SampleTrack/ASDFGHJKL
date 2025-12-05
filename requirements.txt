@@ -1,0 +1,7 @@
+pyrogram
+tgcrypto
+httpx
+pymongo
+flask
+dnspython
+apscheduler
