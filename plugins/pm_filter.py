@@ -1,8 +1,8 @@
 # plugins/callbacks.py
 import logging
 from pyrogram import Client, filters
-from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.types import LinkPreviewOptions
+from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, LinkPreviewOptions
+
 from helper.database import products, users  # adjust import path if your project uses a different module
 from plugins.my_trackings import list_trackings_handler  # import helper to refresh lists
 from config import ADMINS, SUPPORT_CHANNEL, UPDATES_CHANNEL  # ensure these constants exist in your config
@@ -11,99 +11,118 @@ from database.database import db  # if your project uses db helper for admin sta
 
 logger = logging.getLogger(__name__)
 
-def get_start_buttons(user_id):
-    """Helper to generate start buttons for the start/back menu."""
-    buttons = [
-        [
-           InlineKeyboardButton("🆘 Support", url=SUPPORT_CHANNEL),
-            InlineKeyboardButton("🛍 Deals", url=UPDATES_CHANNEL)
-        ],
-        [
-            InlineKeyboardButton("ℹ️ About", callback_data="cb_about"),
-            InlineKeyboardButton("📚 Help", callback_data="cb_help")
-        ]
-    ]
-    if user_id in ADMINS:
-        buttons.append([InlineKeyboardButton("📊 Admin Stats", callback_data="cb_stats")])
-    return InlineKeyboardMarkup(buttons)
 
-back_button = InlineKeyboardMarkup([
-    [InlineKeyboardButton("🔙 Back", callback_data="cb_back")]
-])
-
-
-# Generic callback handler for UI buttons (help / about / back / admin stats)
-@Client.on_callback_query()
-async def callback_handlers(client: Client, query: CallbackQuery):
-    data = query.data
-    user_id = query.from_user.id
-
+# -----------------------
+# HELP callback
+# -----------------------
+@Client.on_callback_query(filters.regex(r"^cb_help$"))
+async def cb_help_handler(client: Client, query: CallbackQuery):
     try:
-        # HELP
-        if data == "cb_help":
-            await query.message.edit_text(
-                text=script.HELP_TEXT,
-                reply_markup=back_button,
-                disable_web_page_preview=True
-            )
+        back_button = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Back", callback_data="cb_back")]
+        ])
 
-        # ABOUT
-        elif data == "cb_about":
-            await query.message.edit_text(
-                text=script.ABOUT_TEXT,
-                reply_markup=back_button,
-                disable_web_page_preview=True
-            )
-
-        # BACK -> start text with start buttons
-        elif data == "cb_back":
-            buttons = [
-                [
-                    InlineKeyboardButton("🆘 Support", url=SUPPORT_CHANNEL),
-                    InlineKeyboardButton("🛍 Deals", url=UPDATES_CHANNEL)
-                ],
-                [
-                    InlineKeyboardButton("ℹ️ About", callback_data="cb_about"),
-                    InlineKeyboardButton("📚 Help", callback_data="cb_help")
-                ]
-            ]
-            if user_id in ADMINS:
-                buttons.append(
-                    [InlineKeyboardButton("📊 Admin Stats", callback_data="cb_stats")]
-                )
-            await query.message.edit_text(
-                text=script.START_TEXT.format(mention=query.from_user.mention),
-                reply_markup=InlineKeyboardMarkup(buttons),
-                disable_web_page_preview=True
-            )
-
-        # Admin stats (popup)
-        elif data == "cb_stats":
-            if user_id in ADMINS:
-                # db.get_all_users() should be async if using motor/mongo; adjust accordingly
-                total = await db.get_all_users()
-                await query.answer(f"📊 Bot Statistics\n\nTotal Users: {total}", show_alert=True)
-            else:
-                await query.answer("❌ You are not an admin.", show_alert=True)
-
-        # Other callbacks pass through (some callbacks for product info are handled in dedicated handlers below)
-        else:
-            # If it's not one of the above, do nothing here; other handlers may intercept via regex filters
-            return
-
+        await query.message.edit_text(
+            text=script.HELP_TEXT,
+            reply_markup=back_button,
+            disable_web_page_preview=True
+        )
+        await query.answer()
     except Exception as e:
-        logger.exception(f"Callback Error for user {user_id}: {e}")
-        # best-effort reply
+        logger.exception(f"Callback Error (cb_help) for user {query.from_user.id}: {e}")
         try:
             await query.answer("Message expired or error occurred.", show_alert=True)
         except Exception:
-            logger.debug("Failed to answer callback on error.")
+            pass
 
 
 # -----------------------
-# Product-related callbacks (moved from my_trackings to central callbacks file)
+# ABOUT callback
 # -----------------------
+@Client.on_callback_query(filters.regex(r"^cb_about$"))
+async def cb_about_handler(client: Client, query: CallbackQuery):
+    try:
+        back_button = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Back", callback_data="cb_back")]
+        ])
 
+        await query.message.edit_text(
+            text=script.ABOUT_TEXT,
+            reply_markup=back_button,
+            disable_web_page_preview=True
+        )
+        await query.answer()
+    except Exception as e:
+        logger.exception(f"Callback Error (cb_about) for user {query.from_user.id}: {e}")
+        try:
+            await query.answer("Message expired or error occurred.", show_alert=True)
+        except Exception:
+            pass
+
+
+# -----------------------
+# BACK -> START callback
+# -----------------------
+@Client.on_callback_query(filters.regex(r"^cb_back$"))
+async def cb_back_handler(client: Client, query: CallbackQuery):
+    user_id = query.from_user.id
+    try:
+        buttons = [
+            [
+                InlineKeyboardButton("🆘 Support", url=SUPPORT_CHANNEL),
+                InlineKeyboardButton("🛍 Deals", url=UPDATES_CHANNEL)
+            ],
+            [
+                InlineKeyboardButton("ℹ️ About", callback_data="cb_about"),
+                InlineKeyboardButton("📚 Help", callback_data="cb_help")
+            ]
+        ]
+
+        if user_id in ADMINS:
+            buttons.append(
+                [InlineKeyboardButton("📊 Admin Stats", callback_data="cb_stats")]
+            )
+
+        await query.message.edit_text(
+            text=script.START_TEXT.format(mention=query.from_user.mention),
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True
+        )
+        await query.answer()
+    except Exception as e:
+        logger.exception(f"Callback Error (cb_back) for user {user_id}: {e}")
+        try:
+            await query.answer("Message expired or error occurred.", show_alert=True)
+        except Exception:
+            pass
+
+
+# -----------------------
+# ADMIN STATS callback
+# -----------------------
+@Client.on_callback_query(filters.regex(r"^cb_stats$"))
+async def cb_stats_handler(client: Client, query: CallbackQuery):
+    user_id = query.from_user.id
+    try:
+        if user_id not in ADMINS:
+            await query.answer("❌ You are not an admin.", show_alert=True)
+            return
+
+        # db.get_all_users() should be async if using motor/mongo; adjust accordingly
+        total = await db.get_all_users()  # make sure this returns an int
+
+        await query.answer(f"📊 Bot Statistics\n\nTotal Users: {total}", show_alert=True)
+    except Exception as e:
+        logger.exception(f"Callback Error (cb_stats) for user {user_id}: {e}")
+        try:
+            await query.answer("Message expired or error occurred.", show_alert=True)
+        except Exception:
+            pass
+
+
+# -----------------------
+# PRODUCT INFO callback
+# -----------------------
 @Client.on_callback_query(filters.regex(r"^info_"))
 async def product_info_handler(client: Client, callback_query: CallbackQuery):
     """Handles button clicks to show detailed info about a tracked product."""
@@ -114,13 +133,21 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
         # product documents might store userid as int or str; match what you use in DB
         product_doc = products.find_one({"_id": product_id, "userid": user_id})
     except Exception as e:
-        logger.error(f"DB Error fetching product info {product_id} for user {user_id}: {e}", exc_info=True)
-        await callback_query.answer("⚠️ An error occurred while fetching product details.", show_alert=True)
+        logger.error(
+            f"DB Error fetching product info {product_id} for user {user_id}: {e}",
+            exc_info=True
+        )
+        await callback_query.answer(
+            "⚠️ An error occurred while fetching product details.",
+            show_alert=True
+        )
         return
 
     if not product_doc:
-        await callback_query.answer("⚠️ This product is no longer tracked or does not exist.", show_alert=True)
-        # try to remove the message to clean up
+        await callback_query.answer(
+            "⚠️ This product is no longer tracked or does not exist.",
+            show_alert=True
+        )
         try:
             await callback_query.message.delete()
         except Exception:
@@ -159,11 +186,18 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
             reply_markup=keyboard,
             link_preview_options=preview_options
         )
+        await callback_query.answer()
     except Exception as e:
-        logger.error(f"Telegram API error editing product info message for user {user_id}: {e}", exc_info=True)
+        logger.error(
+            f"Telegram API error editing product info message for user {user_id}: {e}",
+            exc_info=True
+        )
         await callback_query.answer("⚠️ Could not display product details.", show_alert=True)
 
 
+# -----------------------
+# STOP TRACKING callback
+# -----------------------
 @Client.on_callback_query(filters.regex(r"^stp_tracking_"))
 async def stop_tracking_handler(client: Client, callback_query: CallbackQuery):
     """Handles the 'Stop Tracking' button click."""
@@ -176,16 +210,38 @@ async def stop_tracking_handler(client: Client, callback_query: CallbackQuery):
             {"$pull": {"trackings": product_id}}
         )
     except Exception as e:
-        logger.error(f"DB Error stopping tracking {product_id} for user {user_id}: {e}", exc_info=True)
-        await callback_query.answer("❌ Failed to stop tracking due to a database error.", show_alert=True)
+        logger.error(
+            f"DB Error stopping tracking {product_id} for user {user_id}: {e}",
+            exc_info=True
+        )
+        await callback_query.answer(
+            "❌ Failed to stop tracking due to a database error.",
+            show_alert=True
+        )
         return
 
     await callback_query.answer("✅ Product tracking stopped successfully!", show_alert=False)
+
     # Refresh the tracking list by calling the listing helper (it expects Message or CallbackQuery)
-    await list_trackings_handler(client, callback_query)
+    try:
+        await list_trackings_handler(client, callback_query)
+    except Exception as e:
+        logger.error(f"Error refreshing tracking list after stop for user {user_id}: {e}", exc_info=True)
 
 
-@Client.on_callback_query(filters.regex(r"^back_to_trackings"))
+# -----------------------
+# BACK TO TRACKINGS callback
+# -----------------------
+@Client.on_callback_query(filters.regex(r"^back_to_trackings$"))
 async def back_to_trackings_handler(client: Client, callback_query: CallbackQuery):
     """Handles the 'Back' button click - returns to the trackings list."""
-    await list_trackings_handler(client, callback_query)
+    try:
+        await list_trackings_handler(client, callback_query)
+        await callback_query.answer()
+    except Exception as e:
+        logger.error(
+            f"Error in back_to_trackings_handler for user {callback_query.from_user.id}: {e}",
+            exc_info=True
+        )
+        await callback_query.answer("⚠️ Could not open trackings.", show_alert=True)
+
