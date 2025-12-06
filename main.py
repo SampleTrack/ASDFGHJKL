@@ -78,7 +78,8 @@ async def check_prices(app):
                         
                         # Notify Users
                         # Convert cursor to list to iterate safely
-                        cursor = db.users.find({"trackings": product['_id']})
+                        # Look for the 'id' field INSIDE the trackings array
+                        cursor = db.users.find({"trackings.id": product['_id']})
                         users_tracking = await cursor.to_list(length=None)
                         
                         for user in users_tracking:
