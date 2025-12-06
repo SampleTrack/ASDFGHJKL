@@ -67,21 +67,43 @@ class Database:
             }}
         )
 
-    async def delete_product_tracking(self, user_id, product_id):
-        # Remove from user list
+    
+
+    # ... inside class Database ...
+
+    async def add_tracking_to_user(self, user_id, product_id, current_price_int):
+        """
+        Adds a product to the user's tracking list with the PRICE at that moment.
+        """
+        # 1. First, remove if it already exists (to update the price or prevent duplicates)
         await self.users.update_one(
             {"user_id": int(user_id)},
-            {"$pull": {"trackings": product_id}}
+            {"$pull": {"trackings": {"id": product_id}}}
         )
-        # Check if any other user tracks this, if not, delete from products
-        is_tracked = await self.users.find_one({"trackings": product_id})
+        
+        # 2. Add the new tracking object
+        tracking_obj = {
+            "id": product_id,
+            "added_price": current_price_int,
+            "date": datetime.datetime.now()
+        }
+        
+        await self.users.update_one(
+            {"user_id": int(user_id)},
+            {"$push": {"trackings": tracking_obj}}
+        )
+
+    async def delete_product_tracking(self, user_id, product_id):
+        # Remove the specific object where 'id' matches product_id
+        await self.users.update_one(
+            {"user_id": int(user_id)},
+            {"$pull": {"trackings": {"id": product_id}}}
+        )
+        
+        # Check if anyone else is tracking this product
+        # Query changes to look inside the array of objects: "trackings.id"
+        is_tracked = await self.users.find_one({"trackings.id": product_id})
         if not is_tracked:
             await self.products.delete_one({"_id": product_id})
-
-    async def add_tracking_to_user(self, user_id, product_id):
-        await self.users.update_one(
-            {"user_id": int(user_id)},
-            {"$addToSet": {"trackings": product_id}}
-        )
 
 db = Database(Config.DB_URL, Config.DB_NAME)
