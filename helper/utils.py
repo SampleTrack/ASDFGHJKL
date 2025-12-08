@@ -1,6 +1,5 @@
 import aiohttp
 import logging
-from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +22,3 @@ async def fetch_product_info(url):
         except Exception as e:
             logger.error(f"API Fetch Error: {e}")
             return None
-
-def get_readable_time(seconds):
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-    return f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
