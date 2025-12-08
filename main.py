@@ -114,7 +114,7 @@ async def start_bot():
     await app.start()
     print("Bot Started!")
     if Config.LOG_CHANNEL:
-        await app.send_message(Config.LOG_CHANNEL, "**🤖 Bot Started** with Graph & Stats Support!", quote=True)
+        await app.send_message(Config.LOG_CHANNEL, "**🤖 Bot Started** with Graph & Stats Support!")
     asyncio.create_task(check_prices(app))
     await idle()
     await app.stop()
