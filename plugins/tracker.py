@@ -9,6 +9,7 @@ from helper.utils import fetch_product_info
 
 PENDING_TRACKS = {}
 url_pattern = r"https?://[^\s]+"
+NO_IMAGE_URL = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg"
 
 # -----------------------------------------------------------------------------
 # 1. PROCESS LINK & SHOW PREVIEW (Same as before)
@@ -39,6 +40,14 @@ async def process_link(client, message):
     session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
     real_product_id = str(product_data.get('pid', '')) or ''.join(random.choices(string.ascii_letters, k=12))
 
+    # --- FIX STARTS HERE ---
+    # 1. Safely get the list of images (default to empty list if key missing)
+    thumbnails = product_data.get('thumbnailImages', [])
+    
+    # 2. Check if list has items. If yes, take the first one. If no, use the Placeholder.
+    image_url = thumbnails[0] if thumbnails else NO_IMAGE_URL
+    # --- FIX ENDS HERE ---
+
     temp_data = {
         "_id": real_product_id,
         "product_name": product_data.get('name', 'Unknown'),
@@ -46,17 +55,25 @@ async def process_link(client, message):
         "current_price": {"string": cur_price_str, "int": cur_price_int},
         "original_price": {"string": org_price_str, "int": org_price_int},
         "currency": currency,
-        "image": product_data.get('thumbnailImages', [''])[0],
+        "image": image_url, # Now this is guaranteed to have a string, never crash
         "source": product_data.get('site_name', 'Unknown')
     }
     PENDING_TRACKS[session_id] = temp_data
 
     text = f"**🛒 Preview**\n**Name:** {temp_data['product_name'][:50]}...\n**Price:** {currency}{cur_price_str}\n\n__Start tracking?__"
-    buttons = InlineKeyboardMarkup([[InlineKeyboardButton("✅ Start Tracking", callback_data=f"track_{session_id}"), InlineKeyboardButton("❌ Cancel", callback_data="cancel_track")]])
     
-    try: await message.reply_photo(photo=temp_data['image'], caption=text, reply_markup=buttons)
-    except: await status.edit(text, reply_markup=buttons)
-    else: await status.delete()
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Start Tracking", callback_data=f"track_{session_id}"),
+         InlineKeyboardButton("❌ Cancel", callback_data="cancel_track")]
+    ])
+    
+    # Try sending the photo. If the URL (even the placeholder) fails, fall back to text.
+    try: 
+        await message.reply_photo(photo=temp_data['image'], caption=text, reply_markup=buttons)
+        await status.delete() # Only delete loading status if photo sent successfully
+    except Exception as e:
+        print(f"Image send failed: {e}") # Log the error for debugging
+        await status.edit(text, reply_markup=buttons) # Fallback to text editing
 
 # -----------------------------------------------------------------------------
 # 2. START TRACKING (Updated to save Price)
