@@ -16,7 +16,12 @@ class Script:
             "fetching": "🔎 **Fetching details...**",
             "set_lang": "✅ Language set to **English** 🇺🇸",
             "graph_caption": "📊 **Price History for:** {name}",
-            "no_history": "❌ Not enough data for a graph yet."
+            "no_history": "❌ Not enough data for a graph yet.",
+            "view_details_btn": "👀 View Details",
+            "buy_btn": "🔗 Buy Now",
+            "remove_btn": "🗑️ Remove",
+            "back_btn": "🔙 Back",
+            "graph_btn": "📈 Graph"
         },
         "hi": {
             "start": "**👋 नमस्ते {first_name}!**\n\nमैं आपका **Price Tracker Bot** हूँ। 📉\n\nअमेज़न/फ्लिपकार्ट का लिंक भेजें।",
@@ -32,21 +37,26 @@ class Script:
             "fetching": "🔎 **विवरण लाया जा रहा है...**",
             "set_lang": "✅ भाषा **हिंदी** 🇮🇳 सेट की गई",
             "graph_caption": "📊 **कीमत इतिहास:** {name}",
-            "no_history": "❌ ग्राफ के लिए पर्याप्त डेटा नहीं है।"
+            "no_history": "❌ ग्राफ के लिए पर्याप्त डेटा नहीं है।",
+            "view_details_btn": "👀 विवरण देखें",
+            "buy_btn": "🔗 अभी खरीदें",
+            "remove_btn": "🗑️ हटाएं",
+            "back_btn": "🔙 वापस",
+            "graph_btn": "📈 ग्राफ"
         }
     }
 
-    # Admin Texts remain static (usually English)
+    # Admin Texts (English only)
     STATS_TXT = """
 📊 **Bot Usage Statistics**
 
 👤 **Total Users:** `{users}`
 🔗 **Total Active Trackings:** `{trackings}`
 
-📈 **Trackings by Source:**
+📈 **Trackings by Source (Active):**
 {sources}
 
-🏆 **Top 10 Users:**
+🏆 **Top 10 Users by Trackings:**
 {top_users}
 
 ⏱️ Report generated in `{time}` seconds
@@ -57,7 +67,8 @@ class Script:
 
 📊 **Overall Summary:**
 - Products Checked: `{checked}`
-- Price Changes Detected: `{changes}`
+- Active Trackings: `{active_tr}`
+- Users with Trackings: `{user_tr}`
 
 📈 **Price Changes:**
 - Increased: `{inc}` | Decreased: `{dec}`
@@ -65,57 +76,18 @@ class Script:
 🔍 **Per-Platform:**
 {platforms}
 
-🔔 **Notifications:**
-- Sent: `{sent}` | Failed: `{failed}`
+🔔 **Price Notifications:**
+- Unique Users Notified: `{uniq_users}`
+- Total Sent: `{sent}` | Failed: `{failed}`
+
+⚙️ **System Health:**
+- API/Scraping Errors: `{errors}`
 
 ⏱️ **Performance:**
-- Total Time: `{total_time}s`
-- Avg per Product: `{avg_time}s`
+- Avg. Time per Product: `{avg_time}s`
+- Total Time Taken: `{total_time}s`
 """
-
-    HELP_TXT = """
-**ℹ️ How to Use:**
-
-1. **Copy Link:** Copy a product URL from Amazon/Flipkart.
-2. **Send Link:** Paste it here.
-3. **Track:** I will auto-detect it.
-
-**Manage Trackings:**
-Click **"📦 My Trackings"** to see your list. You can remove items there.
-"""
-
-    ABOUT_TXT = """
-**🤖 About Me**
-
-**Name:** Price Tracker Bot
-**Version:** v2.0 (Async)
-**Dev:** BotIO Devs
-**Language:** Python 3 (Pyrogram)
-**Database:** MongoDB (Motor)
-
-__Keeping your wallet safe since 2025.__
-"""
-
-    # Keep your existing STATS_TXT, BAN_TXT, etc.
-    STATS_TXT = """
-**📊 Admin Statistics**
-
-**👥 Total Users:** `{users}`
-**📅 Users Today:** `{today}`
-**📦 Total Tracked Products:** `{products}`
-**📉 Storage Used:** `{storage}`
-"""
-    BAN_TXT = "🚫 **You are banned.**"
     
-    NEW_USER_LOG = """
-**#New_User**
-**User:** [{name}](tg://user?id={id})
-**ID:** `{id}`
-**Date:** `{date}`
-"""
-
-    RESTART_LOG = """
-**🔄 Bot Restarted**
-**Date:** `{date}`
-**Time:** `{time}`
-"""
+    # Keep Logs templates
+    NEW_USER_LOG = "**#New_User**\n**User:** [{name}](tg://user?id={id})\n**ID:** `{id}`"
+    RESTART_LOG = "**🔄 Bot Restarted**\n**Date:** `{date}`\n**Time:** `{time}`"
