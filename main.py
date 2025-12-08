@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+import time
 from flask import Flask
 from pyrogram import Client, idle
 from config import Config
@@ -9,139 +10,127 @@ from helper.database import db
 from helper.utils import fetch_product_info
 from datetime import datetime
 
-# -----------------------------------------------------------------------------
-# 🛠️ SETUP LOGGING (MUST BE GLOBAL)
-# -----------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("log.txt"),
-        logging.StreamHandler()
-    ]
-)
-# Define logger globally so 'check_prices' can see it
+# Logging setup (Same as before)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', handlers=[logging.FileHandler("log.txt"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
-# -----------------------------------------------------------------------------
-# 🌐 FLASK SERVER
-# -----------------------------------------------------------------------------
 web_app = Flask(__name__)
-
 @web_app.route('/')
-def home():
-    return "Bot is Running!"
-
-def run_flask():
-    # Run Flask on port 8080 (Required for Render)
-    web_app.run(host="0.0.0.0", port=Config.PORT)
+def home(): return "Bot is Running!"
+def run_flask(): web_app.run(host="0.0.0.0", port=Config.PORT)
 
 # -----------------------------------------------------------------------------
-# 📉 PRICE CHECKER LOOP
+# 📉 ADVANCED PRICE CHECKER LOOP
 # -----------------------------------------------------------------------------
 async def check_prices(app):
-    # Wait 30 seconds before starting to allow bot to connect fully
     await asyncio.sleep(30)
     logger.info("Starting Price Check Loop...")
     
     while True:
+        start_time = time.time()
+        
+        # Stats Containers
+        stats = {
+            "checked": 0, "changes": 0, "inc": 0, "dec": 0, 
+            "sent": 0, "failed": 0, "errors": 0,
+            "platforms": {} 
+        }
+
         try:
-            # We iterate over products asynchronously if using Motor
             products = db.products.find({})
             async for product in products:
+                stats["checked"] += 1
+                source = product.get('source', 'Unknown')
+                
+                # Init Platform Stats
+                if source not in stats["platforms"]: 
+                    stats["platforms"][source] = {"checked": 0, "drops": 0}
+                stats["platforms"][source]["checked"] += 1
+
                 try:
                     url = product.get('url')
                     current_db_price = product.get('current_price', {}).get('int', 0)
                     
-                    # Fetch new data
                     data = await fetch_product_info(url)
                     if not data or not data.get('dealsData'):
-                        continue # Skip if API fails
+                        stats["errors"] += 1
+                        continue 
                         
                     api_prod = data['dealsData']['product_data']
                     currency = data.get('currencySymbol', '₹')
                     new_price_str = str(api_prod.get('cur_price', '0'))
                     
-                    try:
-                        new_price_int = int(float(new_price_str.replace(',', '').replace(currency, '').strip()))
-                    except:
-                        continue
+                    try: new_price_int = int(float(new_price_str.replace(',', '').replace(currency, '').strip()))
+                    except: continue
 
-                    # Compare Prices
+                    # Compare
                     if new_price_int != current_db_price and new_price_int > 0:
-                        # Price Changed!
-                        change_type = "dropped ⬇️" if new_price_int < current_db_price else "increased ⬆️"
+                        stats["changes"] += 1
                         
-                        # Update DB
+                        if new_price_int < current_db_price:
+                            stats["dec"] += 1
+                            stats["platforms"][source]["drops"] += 1
+                            change_type = "dropped ⬇️"
+                        else:
+                            stats["inc"] += 1
+                            change_type = "increased ⬆️"
+                        
+                        # Update DB (This now pushes to history too)
                         await db.update_product_price(product['_id'], new_price_str, new_price_int)
                         
                         # Notify Users
-                        # Convert cursor to list to iterate safely
-                        # Look for the 'id' field INSIDE the trackings array
                         cursor = db.users.find({"trackings.id": product['_id']})
-                        users_tracking = await cursor.to_list(length=None)
-                        
-                        for user in users_tracking:
+                        async for user in cursor:
                             try:
+                                # Multi-Language Support for Notification
+                                lang = user.get("lang", "en")
+                                # (Ideally, you'd fetch translated strings here, but keeping it simple for alerts)
                                 msg = (f"**🚨 Price Alert!**\n\n"
                                        f"**{product['product_name']}** has {change_type}\n"
                                        f"**New Price:** {currency}{new_price_str}\n"
                                        f"[Check Now]({url})")
                                 
-                                await app.send_message(user['user_id'], msg)
-                                await asyncio.sleep(0.5) # Prevent FloodWait
+                                await app.send_message(user['user_id'], msg, quote=True)
+                                stats["sent"] += 1
+                                await asyncio.sleep(0.5) 
                             except Exception as e:
-                                logger.error(f"Failed to notify {user['user_id']}: {e}")
+                                stats["failed"] += 1
+                                logger.error(f"Notify fail: {e}")
 
                 except Exception as inner_e:
-                    logger.error(f"Error checking product {product.get('_id')}: {inner_e}")
+                    stats["errors"] += 1
+                    logger.error(f"Prod Error: {inner_e}")
                     
         except Exception as e:
-            logger.error(f"Error in main loop: {e}")
+            logger.error(f"Loop Error: {e}")
         
-        # Wait for the next interval (5 hours)
+        end_time = time.time()
+        total_time = round(end_time - start_time, 2)
+        avg_time = round(total_time / stats["checked"], 2) if stats["checked"] > 0 else 0
+
+        # Update Global Stats for Admin Command
+        Config.LAST_CHECK_STATS = {
+            "status": "Success",
+            "date": datetime.now().strftime("%b%d"),
+            "data": stats,
+            "perf": {"total": total_time, "avg": avg_time}
+        }
+        
+        logger.info(f"Check finished in {total_time}s. Waiting {Config.CHECK_INTERVAL}s.")
         await asyncio.sleep(Config.CHECK_INTERVAL)
 
-# -----------------------------------------------------------------------------
-# 🤖 BOT STARTUP
-# -----------------------------------------------------------------------------
-app = Client(
-    "PriceTracker",
-    api_id=Config.API_ID,
-    api_hash=Config.API_HASH,
-    bot_token=Config.BOT_TOKEN,
-    plugins=dict(root="plugins")
-)
+app = Client("PriceTracker", api_id=Config.API_ID, api_hash=Config.API_HASH, bot_token=Config.BOT_TOKEN, plugins=dict(root="plugins"))
 
 async def start_bot():
     await app.start()
     print("Bot Started!")
-    
-    # Send Restart Log
     if Config.LOG_CHANNEL:
-        try:
-            await app.send_message(
-                Config.LOG_CHANNEL, 
-                Script.RESTART_LOG.format(
-                    date=datetime.now().strftime("%Y-%m-%d"),
-                    time=datetime.now().strftime("%H:%M:%S")
-                )
-            )
-            for admin in Config.ADMINS:
-                await app.send_message(admin, "🤖 Bot has restarted!")
-        except Exception as e:
-            logger.error(f"Log Error: {e}")
-
-    # Start Background Task
+        await app.send_message(Config.LOG_CHANNEL, "🤖 **Bot Started** with 2-Hour Auto-Check & Graphs!", quote=True)
     asyncio.create_task(check_prices(app))
-    
     await idle()
     await app.stop()
 
 if __name__ == "__main__":
-    # Start Flask in a separate thread
     threading.Thread(target=run_flask, daemon=True).start()
-    
-    # Start Bot
     app.loop.run_until_complete(start_bot())
