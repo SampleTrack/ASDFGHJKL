@@ -44,6 +44,9 @@ class Database:
         # Counts users who have at least 1 item in trackings
         return await self.users.count_documents({"trackings.0": {"$exists": True}})
 
+    async def get_users_with_trackings_count(self):
+        return await self.users.count_documents({"trackings": {"$not": {"$size": 0}}})
+
     async def get_top_users(self, limit=10):
         # Advanced Aggregation to count trackings array size
         pipeline = [
@@ -99,7 +102,7 @@ class Database:
         )
 
     async def count_products_by_source(self):
-        # Aggregation to count products per site (Amazon, Flipkart, etc)
+        # Aggregation to count products per site
         pipeline = [
             {"$group": {"_id": "$source", "count": {"$sum": 1}}}
         ]
@@ -131,9 +134,3 @@ class Database:
             await self.products.delete_one({"_id": product_id})
 
 db = Database(Config.DB_URL, Config.DB_NAME)
-
-
-
-
-
-
