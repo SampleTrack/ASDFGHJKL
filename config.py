@@ -8,12 +8,12 @@ class Config:
     # Bot Token from @BotFather
     BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
-    # Admins
+    # Admins: Can be a single ID or list separated by spaces/commas
     admin_str = os.getenv("ADMINS", "")
     ADMINS = [int(x) for x in admin_str.replace(",", " ").split()] if admin_str else []
 
     # Database
-    DB_URL = os.getenv("DB_URL", "") 
+    DB_URL = os.getenv("DB_URL", "") # MongoDB Connection String
     DB_NAME = os.getenv("DB_NAME", "PriceTrackerBot")
 
     # Logging
