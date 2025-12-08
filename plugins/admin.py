@@ -21,14 +21,21 @@ async def stats_handler(client, message):
     sources_data = await db.count_products_by_source()
     source_txt = ""
     for s in sources_data:
-        source_txt += f"  - **{s['_id']}**: {s['count']} products\n"
+        # Use .get() to prevent crash if _id is missing
+        source_name = s.get('_id', 'Unknown')
+        count = s.get('count', 0)
+        source_txt += f"  - **{source_name}**: {count} products\n"
     if not source_txt: source_txt = "  - None"
 
     # Top Users
     top_users_data = await db.get_top_users(limit=10)
     top_users_txt = ""
     for i, u in enumerate(top_users_data, 1):
-        top_users_txt += f"  {i}. **ID:** `{u['user_id']}` - {u['tracking_count']} trackings\n"
+        # FIX IS HERE: Use .get() instead of direct access u['user_id']
+        uid = u.get('user_id', 'N/A') 
+        t_count = u.get('tracking_count', 0)
+        top_users_txt += f"  {i}. **ID:** `{uid}` - {t_count} trackings\n"
+        
     if not top_users_txt: top_users_txt = "  - None"
 
     end_t = time.time()
