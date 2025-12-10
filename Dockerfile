@@ -17,7 +17,7 @@ COPY . /app
 RUN chmod -R 777 /app
 
 # Expose the port Flask (or any app) runs on
-EXPOSE 7860
+EXPOSE 8080
 
 # Default command to run the app
 CMD ["python3", "main.py"]
