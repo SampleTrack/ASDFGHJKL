@@ -27,7 +27,7 @@ def run_flask():
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.ERROR)
         web_app.logger.setLevel(logging.ERROR)
-        web_app.run(host="0.0.0.0", port=7860)
+        web_app.run(host="0.0.0.0", port=8080)
     except Exception:
         logging.exception("Flask server crashed!")
 
