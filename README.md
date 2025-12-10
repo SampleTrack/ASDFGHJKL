@@ -21,9 +21,4 @@ bcast - ❌
 fcast - ❌
 ```
 
-
-
-
-#### Fully coded and maintained by https://t.me/botio_devs | https://t.me/Appuz_007
-
 Fell free to drop your suggestion!!
