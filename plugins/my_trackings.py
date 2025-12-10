@@ -104,32 +104,47 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
         await callback_query.answer("⚠️ An error occurred while fetching product details.", show_alert=True)
         return
 
-
     if not product_doc:
         await callback_query.answer("⚠️ This product is no longer tracked or does not exist.", show_alert=True)
-        await callback_query.message.delete()
+        # Optional: Delete the message if the product is gone
+        # await callback_query.message.delete()
         return
 
     api_data = product_doc
     
-    # Get the first image URL for the preview link
-    images = api_data.get("images", {}).get("initial", [])
+    # --- FIX START ---
+    # safely get 'images'
+    raw_images = api_data.get("images", [])
+    
+    images = []
+    if isinstance(raw_images, list):
+        # Case 1: Database has ['url1', 'url2']
+        images = raw_images
+    elif isinstance(raw_images, dict):
+        # Case 2: Database has {'initial': ['url1'], ...}
+        images = raw_images.get("initial", [])
+    # --- FIX END ---
+
     image_preview_link = ""
-    if images:
-        # Use a zero-width space for an invisible link text
+    if images and len(images) > 0:
+        # Use a zero-width space for an invisible link text to trigger preview
         image_preview_link = f"[\u200b]({images[0]})"
         
     preview_options = LinkPreviewOptions(
         show_above_text=True,
-        prefer_small_media =True)
-
+        prefer_small_media=True
+    )
     
-    # Construct the message caption with the hidden image link at the top
+    # Construct the message caption
+    # Using .get({}, {}).get() pattern for price to avoid errors if fields are missing
+    original_price = api_data.get('original_price', {}).get('string', 'N/A') if api_data.get('original_price') else 'N/A'
+    current_price = api_data.get('current_price', {}).get('string', 'N/A') if api_data.get('current_price') else 'N/A'
+
     caption = (
         f"{image_preview_link}"
         f"**{api_data.get('product_name', 'N/A')}**\n\n"
-        f"**Price:** ~~{api_data.get('original_price', {}).get('string', 'N/A')}~~ "
-        f"→ **{api_data.get('current_price', {}).get('string', 'N/A')}** "
+        f"**Price:** ~~{original_price}~~ "
+        f"→ **{current_price}** "
         f"`({api_data.get('discount_percentage', 'N/A')})`\n"
         f"**Rating:** {api_data.get('rating', 'N/A')} ({api_data.get('reviews_count', 0)} ratings)\n\n"
     )
@@ -140,7 +155,6 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
             InlineKeyboardButton("🔙 Back", callback_data="back_to_trackings")
         ]]
     )
-    
 
     try:
         await callback_query.message.edit_text(
@@ -151,7 +165,6 @@ async def product_info_handler(client: Client, callback_query: CallbackQuery):
     except Exception as e:
         logger.error(f"Telegram API error editing product info message for user {user_id}: {e}", exc_info=True)
         await callback_query.answer("⚠️ Could not display product details.", show_alert=True)
-
 
 @app.on_callback_query(filters.regex(r"^stp_tracking_"))
 async def stop_tracking_handler(client: Client, callback_query: CallbackQuery):
