@@ -13,7 +13,7 @@ from helper.message_text import text_messages, message_buttons
 async def start_command(client, message):
     user_id = message.from_user.id
     try:
-        if not is_user_exist(user_id):
+        if not await is_user_exist(user_id):
             await add_user(user_id, client)
             user = await client.get_users(user_id)   # FIX: first_name was undefined
             first_name = user.first_name
