@@ -5,7 +5,7 @@ from pyrogram.errors import UserNotParticipant, FloodWait, UserDeactivated, User
 
 # Local imports
 from config import Telegram
-from helper.database import add_user, all_users, users, remove_user
+from helper.database import add_user, is_user_exist, all_users, users, remove_user
 from helper.message_text import text_messages, message_buttons
 
 
@@ -13,7 +13,14 @@ from helper.message_text import text_messages, message_buttons
 async def start_command(client, message):
     user_id = message.from_user.id
     try:
-        await add_user(user_id, client)
+        if not is_user_exist(user_id):
+            await add_user(user_id, client)
+            user = await client.get_users(user_id)   # FIX: first_name was undefined
+            first_name = user.first_name
+            await send_join_log(
+                client, 
+                f"#New_User\n\nNew User\n\n[{first_name}](tg://user?id={user_id})"
+            )
         await message.reply_text(
             text_messages.start_text,
             disable_web_page_preview=True,
