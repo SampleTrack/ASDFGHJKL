@@ -13,7 +13,6 @@ from helper.message_text import text_messages, message_buttons
 async def start_command(client, message):
     user_id = message.from_user.id
     try:
-        await client.get_chat_member(Telegram.Fsub_ID, user_id)
         await add_user(user_id, client)
         await message.reply_text(
             text_messages.start_text,
