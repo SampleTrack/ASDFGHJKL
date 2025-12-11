@@ -12,20 +12,14 @@ from helper.message_text import text_messages, message_buttons
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
     user_id = message.from_user.id
-    try:
-        await client.get_chat_member(Telegram.Fsub_ID, user_id)
-        await add_user(user_id, client)
-        await message.reply_text(
-            text_messages.start_text,
-            disable_web_page_preview=True,
-            reply_to_message_id=message.id,
-            reply_markup=message_buttons.start_buttons,
-        )
-    except UserNotParticipant:
-        await message.reply(
-            text_messages.Fsub_text,
-            reply_markup=message_buttons.Fsub_buttons
-        )
+    await client.get_chat_member(Telegram.Fsub_ID, user_id)
+    await add_user(user_id, client)
+    await message.reply_text(
+        text_messages.start_text,
+        disable_web_page_preview=True,
+        reply_to_message_id=message.id,
+        reply_markup=message_buttons.start_buttons,
+    )
     except Exception as e:
         print(f"Error in start function: {e}")
 
