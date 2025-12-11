@@ -33,20 +33,17 @@ async def send_join_log(client, log_message):
         logger.warning(f"Failed to send error log: {e}")
 
 
-def already_db(user_id):
+async is_user_exist(user_id):
     user = users.find_one({"user_id": str(user_id)})
     if not user:
         return False
     return True
 
 async def add_user(user_id, client):
-    in_db = already_db(user_id)
-    if in_db:
-        return
     user = await client.get_users(user_id)  # Await here
     first_name = user.first_name
     users.insert_one({"user_id": str(user_id)})        
-    return await send_join_log(client, f"#New_User\n\nNew User\n\n [{first_name}]( tg://user?id={user_id})")
+    return
 
 def remove_user(user_id):
     in_db = already_db(user_id)
