@@ -33,17 +33,19 @@ async def send_join_log(client, log_message):
         logger.warning(f"Failed to send error log: {e}")
 
 
-async is_user_exist(user_id):
-    user = users.find_one({"user_id": str(user_id)})
-    if not user:
-        return False
-    return True
+async def is_user_exist(user_id):
+    user = await users.find_one({"user_id": str(user_id)})
+    return bool(user)
+
 
 async def add_user(user_id, client):
-    user = await client.get_users(user_id)  # Await here
+    user = await client.get_users(user_id)
     first_name = user.first_name
-    users.insert_one({"user_id": str(user_id)})        
-    return
+
+    await users.insert_one({
+        "user_id": str(user_id),
+        "first_name": first_name
+    })
 
 def remove_user(user_id):
     in_db = already_db(user_id)
