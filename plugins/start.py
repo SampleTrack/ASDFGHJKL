@@ -8,26 +8,48 @@ from config import Telegram
 from helper.database import add_user, all_users, users, remove_user
 from helper.message_text import text_messages, message_buttons
 
+# Configure logging (Best Practice)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-@app.on_message(filters.command("start"))
+
+@app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
     user_id = message.from_user.id
+    
+    # 1. Add User to Database first (Optional: usually you want to track users even if they haven't joined the channel yet)
+    # Ensure your add_user function handles the arguments correctly.
+    # Assuming standard usage: await add_user(user_id, message.from_user.username)
+    await add_user(user_id, client) 
+
+    # 2. Check Force Subscribe Logic
+    if Telegram.Fsub_ID: # Only check if an ID is actually set in Config
+        try:
+            # Check if user is a member
+            await client.get_chat_member(Telegram.Fsub_ID, user_id)
+        except UserNotParticipant:
+            # User is not in the channel, send FSub buttons
+            await message.reply_text(
+                text=text_messages.Fsub_text,
+                reply_markup=message_buttons.Fsub_buttons
+            )
+            return # Stop execution here so they don't get the start message
+        except Exception as e:
+            # Handle cases where Bot is not admin in the channel or ID is wrong
+            logger.error(f"FSub Error: {e}")
+            await message.reply_text("Something went wrong with the Force Subscribe channel. Please contact admin.")
+            return
+
+    # 3. Send Start Message (If FSub passed or was disabled)
     try:
-        await client.get_chat_member(Telegram.Fsub_ID, user_id)
-        await add_user(user_id, client)
         await message.reply_text(
-            text_messages.start_text,
+            text=text_messages.start_text,
             disable_web_page_preview=True,
             reply_to_message_id=message.id,
             reply_markup=message_buttons.start_buttons,
         )
-    except UserNotParticipant:
-        await message.reply(
-            text_messages.Fsub_text,
-            reply_markup=message_buttons.Fsub_buttons
-        )
     except Exception as e:
-        print(f"Error in start function: {e}")
+        logger.error(f"Error sending start message: {e}")
 
 
 @app.on_message(filters.command("help"))
