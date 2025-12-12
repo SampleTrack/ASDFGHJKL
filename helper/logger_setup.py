@@ -1,7 +1,11 @@
-
 import logging
 import asyncio
+import os
 from helper.report_error import report_error
+
+# Ensure logs directory exists
+if not os.path.exists("logs"):
+    os.makedirs("logs")
 
 class ErrorReportingHandler(logging.Handler):
     def __init__(self, app):
@@ -10,33 +14,40 @@ class ErrorReportingHandler(logging.Handler):
 
     def emit(self, record):
         if record.levelno >= logging.ERROR:
-            # Use self.format(record) to get the full formatted message including traceback
             full_log_message = self.format(record)
             try:
                 loop = asyncio.get_running_loop()
                 loop.create_task(report_error(self.app, full_log_message))
             except RuntimeError:
-                # If no loop is running, run it just for this task
                 asyncio.run(report_error(self.app, full_log_message))
 
 def init_logger(app, name=__name__, level=logging.INFO):
-    """Initializes the logger with console and custom error reporting handlers."""
-    # Set up global logging format and level
+    """Initializes logger with Console, File, and Telegram reporting."""
+    
+    # 1. Basic Config - Logs to Console
     logging.basicConfig(
         level=level,
-        format="[%(asctime)s] [%(levelname)s] [%(name)s] [%(filename)s:%(funcName)s:%(lineno)d] %(message)s",
+        format="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-    # Suppress info logs from pyrogram
+    # 2. File Handler - Saves errors to logs/error.log
+    file_handler = logging.FileHandler("logs/error.log")
+    file_handler.setLevel(logging.ERROR) # Only save Errors and Critical bugs
+    file_formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s"
+    )
+    file_handler.setFormatter(file_formatter)
+
+    # Add handler to root logger
+    root_logger = logging.getLogger()
+    root_logger.addHandler(file_handler)
+
+    # 3. Suppress noisy libraries
     logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
-    # Attach error reporting handler to the root logger, so all errors are caught
-    root_logger = logging.getLogger()
-    
-    # Avoid adding the handler multiple times if the logger is re-initialized
+    # 4. Telegram Error Reporter
     if not any(isinstance(h, ErrorReportingHandler) for h in root_logger.handlers):
         root_logger.addHandler(ErrorReportingHandler(app))
 
-    # Return your app's logger
     return logging.getLogger(name)
