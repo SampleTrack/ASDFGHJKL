@@ -127,28 +127,29 @@ async def fetch_product_data(client: httpx.AsyncClient, product_doc: dict, log_f
         "reviews_count": product_main_data.get("ratingCount"),
         "images": product_main_data.get("thumbnailImages", []),
     }
-    result["update_payload"] = update_payload
-
-    # Prepare notification text
-    product_name = product_main_data.get("name", "N/A")
-    old_price_str = product_doc.get("current_price", {}).get("string", "N/A")
-    new_price_str = update_payload["current_price"]["string"]
-    image_url = (update_payload["images"][0] if update_payload.get("images") else None)
-    button = InlineKeyboardMarkup([[InlineKeyboardButton("Buy Now 🛍️", url=product_url)]])
-
+    
+    # --- UPDATED SMART ALERT LOGIC ---
     if new_price_int > old_price_int:
-        log_file.write(f"📈 Price Change: Increased by +{price_change_percent:.2f}%\n")
-        result["status"] = "increased"
-        result["notification_text"] = (
-            f"🔺 **Price Increased!**\n\n"
-            f"**Product:** [{product_name}]({product_url})\n"
-            f"**Old Price:** `{currency_symbol}{old_price_str}`\n"
-            f"**New Price:** `{currency_symbol}{new_price_str}`\n"
-            f"**Change:** `+{price_change_percent:.2f}%`"
-        )
+        # Price Increased: Update DB but DO NOT notify users
+        log_file.write(f"📈 Price Increased (+{price_change_percent:.2f}%). Updating DB but staying silent.\n")
+        result["status"] = "silent_update"
+        result["update_payload"] = update_payload
+        # No 'notification_text' is added here, so the user won't be bothered.
+        return product_id, result
+
+    # --- PRICE DROP LOGIC (Notify User) ---
     else:
         log_file.write(f"📉 Price Change: Decreased by {price_change_percent:.2f}%\n")
         result["status"] = "decreased"
+        result["update_payload"] = update_payload
+        
+        # Prepare notification text
+        product_name = product_main_data.get("name", "N/A")
+        old_price_str = product_doc.get("current_price", {}).get("string", "N/A")
+        new_price_str = update_payload["current_price"]["string"]
+        image_url = (update_payload["images"][0] if update_payload.get("images") else None)
+        button = InlineKeyboardMarkup([[InlineKeyboardButton("Buy Now 🛍️", url=product_url)]])
+
         result["notification_text"] = (
             f"✅ **Price Dropped!**\n\n"
             f"**Product:** [{product_name}]({product_url})\n"
@@ -156,11 +157,10 @@ async def fetch_product_data(client: httpx.AsyncClient, product_doc: dict, log_f
             f"**New Price:** `{currency_symbol}{new_price_str}`\n"
             f"**Change:** `{price_change_percent:.2f}%`"
         )
+        result["notification_text"] += f"\n\n[\u200b]({image_url})" if image_url else ""
+        result["button"] = button
 
-    result["notification_text"] += f"\n\n[\u200b]({image_url})" if image_url else ""
-    result["button"] = button
-
-    return product_id, result
+        return product_id, result
 
 
 async def save_and_send_logs(client: Client, summary_text: str, log_file_path: str):
@@ -229,7 +229,7 @@ async def run_price_check(client: Client, manual_trigger: bool = False, status_m
             for product_id in tracking_ids:
                 if products.count_documents({"_id": product_id}) > 0:
                     valid_ids_for_user.append(product_id)
-                    product_to_users_map[product_id].append(user_id) # ✅ FIX: Changed .add to .append
+                    product_to_users_map[product_id].append(user_id)
                 else:
                     missing_ids_for_user.append(product_id)
                     log_file.write(f"Found missing ref '{product_id}' for user '{user_id}'\n")
@@ -341,7 +341,8 @@ async def run_price_check(client: Client, manual_trigger: bool = False, status_m
                 f"- Active Trackings: `{total_active_trackings}`\n"
                 f"- Users with Trackings: `{len(users_with_trackings)}`\n\n"
                 f"📈 **Price Changes:**\n"
-                f"- Increased: `{counters['increased']}` | Decreased: `{counters['decreased']}`\n\n"
+                f"- Increased (Silent): `{counters['silent_update']}`\n"
+                f"- Decreased (Notified): `{counters['decreased']}`\n\n"
                 f"🔍 **Per-Platform:**\n{platform_summary_text}\n\n"
                 f"{notif_summary}\n\n"
                 f"⚙️ **System Health:**\n"
@@ -360,3 +361,4 @@ async def run_price_check(client: Client, manual_trigger: bool = False, status_m
                     logger.error(f"Failed to edit status message: {e}", exc_info=True)
 
     await save_and_send_logs(client, summary_text, LOG_FILE_PATH)
+    
