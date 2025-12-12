@@ -2,6 +2,8 @@ import os
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from config import Telegram
+from bson.json_util import dumps
+from helper.database import users, products #
 
 # Filter to ensure only Admin uses these commands
 async def is_admin_check(_, __, message: Message):
@@ -11,6 +13,46 @@ async def is_admin_check(_, __, message: Message):
 
 admin_only = filters.create(is_admin_check)
 
+
+
+@Client.on_message(filters.command("backup") & admin_only)
+async def backup_cmd(client: Client, message: Message):
+    status_msg = await message.reply("📦 **Backing up database...**")
+
+    files_to_send = []
+
+    # 1. Backup Users
+    try:
+        user_list = list(users.find({}))
+        with open("users_backup.json", "w", encoding="utf-8") as f:
+            f.write(dumps(user_list, indent=2))
+        files_to_send.append("users_backup.json")
+    except Exception as e:
+        await message.reply(f"❌ Error backing up users: {e}")
+
+    # 2. Backup Products
+    try:
+        product_list = list(products.find({}))
+        with open("products_backup.json", "w", encoding="utf-8") as f:
+            f.write(dumps(product_list, indent=2))
+        files_to_send.append("products_backup.json")
+    except Exception as e:
+        await message.reply(f"❌ Error backing up products: {e}")
+
+    # 3. Send Files
+    if files_to_send:
+        for file_path in files_to_send:
+            await client.send_document(
+                chat_id=message.chat.id,
+                document=file_path,
+                caption=f"🗄 **Database Backup:** `{file_path}`"
+            )
+            os.remove(file_path) # Clean up file after sending
+        
+        await status_msg.edit("✅ **Backup Complete!**")
+    else:
+        await status_msg.edit("⚠️ **Backup Failed.** No files generated.")
+        
 @Client.on_message(filters.command("log") & admin_only)
 async def send_logs(client: Client, message: Message):
     """Sends the error log file and price check log file."""
