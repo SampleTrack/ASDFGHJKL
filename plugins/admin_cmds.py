@@ -1,12 +1,9 @@
-import sys
 import os
-import time
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from config import Telegram
 
-# --- Helper Filter ---
-# This ensures only the Admin defined in config.py can use these commands
+# Filter to ensure only Admin uses these commands
 async def is_admin_check(_, __, message: Message):
     if not Telegram.ADMIN: 
         return False
@@ -14,6 +11,37 @@ async def is_admin_check(_, __, message: Message):
 
 admin_only = filters.create(is_admin_check)
 
+@Client.on_message(filters.command("log") & admin_only)
+async def send_logs(client: Client, message: Message):
+    """Sends the error log file and price check log file."""
+    
+    # 1. Define file paths
+    error_log = "logs/error.log"
+    tracker_log = "logs/price_check.log"
+    
+    sent = False
+
+    # 2. Check and send Error Log
+    if os.path.exists(error_log) and os.path.getsize(error_log) > 0:
+        await message.reply_document(
+            document=error_log,
+            caption="🐞 **System Error Log**\nContains bugs and crashes."
+        )
+        sent = True
+    
+    # 3. Check and send Price Tracker Log
+    if os.path.exists(tracker_log) and os.path.getsize(tracker_log) > 0:
+        await message.reply_document(
+            document=tracker_log,
+            caption="📉 **Price Checker Log**\nDetails from the last price check run."
+        )
+        sent = True
+
+    # 4. If no files found
+    if not sent:
+        await message.reply_text("✅ **No logs found.**\nThis means no errors have been recorded yet!")
+        
+        
 # --- /ping Command ---
 # Checks the bot's response speed (latency)
 @Client.on_message(filters.command("ping") & admin_only)
@@ -33,17 +61,3 @@ async def restart_cmd(client: Client, message: Message):
     
     # Restarts the current script using the same python interpreter
     os.execl(sys.executable, sys.executable, "main.py")
-
-# --- /logs Command ---
-# (Optional) Retreives the price checker log file if it exists
-@Client.on_message(filters.command("logs") & admin_only)
-async def get_logs_cmd(client: Client, message: Message):
-    log_path = os.path.join("logs", "price_check.log")
-    
-    if os.path.exists(log_path):
-        await message.reply_document(
-            document=log_path,
-            caption="📂 **Here are the latest price check logs.**"
-        )
-    else:
-        await message.reply("❌ **No log file found.**\nRun /check first to generate logs.")
